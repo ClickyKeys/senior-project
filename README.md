@@ -1,1 +1,1 @@
-# senior-project
+CS senior project with emphasis on machine learning and data science
