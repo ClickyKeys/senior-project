@@ -1,23 +1,24 @@
 #sources:
 #https://swcarpentry.github.io/r-novice-inflammation/03-loops-R/
+#https://stackoverflow.com/questions/19791760/adding-data-frames-as-list-elements-using-for-loop
 
 #importing and cleaning data
-pacman::p_load(pacman, tidyr, tidyverse, dplyr, rlist, skimr, ggplot2)
+pacman::p_load(tidyverse, rlist, skimr)
 
 #import datasets - starting with first one as a test
 #make lists for the different data conditions
 Hospital_Data <- list.files(path = "C:/Users/lkn56/Desktop/School Stuff/Fall 2021/CSCI 487/hospitals_current_data/EVALUATED", pattern = "*.csv", full.names = TRUE)
 names(Hospital_Data) <- list.files(path = "C:/Users/lkn56/Desktop/School Stuff/Fall 2021/CSCI 487/hospitals_current_data/EVALUATED", pattern = "*.csv", full.names = FALSE)
 
-Transposed_Data <- NULL
-Not_Transposed <- NULL
+Transposed_Data <- list()
+Not_Transposed <- list()
 Duplicates_Exist <- NULL
 T_Names <- NULL
 NT_Names <- NULL
 
 for(j in 1:length(Hospital_Data)) {
-  data = read_csv(Hospital_Data[1])
-  View(data)
+  #changed to read_csv
+  data = read.csv(Hospital_Data[j])
   
   #group the data by facility.ID to check for duplicate rows
   data_summary <-
@@ -33,42 +34,277 @@ for(j in 1:length(Hospital_Data)) {
     }
   }
 
-  #print(paste0("duplicates: ", var_count, " in dataset: ", Hospital_Data[j]))
+  print(paste0("duplicates: ", var_count, " in dataset: ", Hospital_Data[j]))
   #separate dataframes with duplicates and without duplicates into separate lists
   
   if( var_count == 0 ) {
-    Transposed_Data <- list.append(Transposed_Data, list(data))
-    T_Names <- list.append(T_Names, names(Hospital_Data[1]))
+    #Transposed_Data <- list.append(Transposed_Data, list(data))
+    Transposed_Data <- list.append(Transposed_Data, data.frame(data))
+    T_Names <- list.append(T_Names, names(Hospital_Data[j]))
   }
   
   if( var_count > 0 ) {
-    Not_Transposed <- list.append(Not_Transposed, list(data))
-    NT_Names <- list.append(NT_Names, names(Hospital_Data[1]))
+    #Not_Transposed <- list.append(Not_Transposed, list(data))
+    Not_Transposed <- list.append(Not_Transposed, data.frame(data))
+    NT_Names <- list.append(NT_Names, names(Hospital_Data[j]))
   }
 }
 
 #Not_Transposed[1] is transposed but has duplicates - Move element 1 to Transposed_Data list
-Transposed_Data <- list.append(Transposed_Data, Not_Transposed[1])
+T_Names <- list.append(T_Names, NT_Names[1])
+NT_Names <- NT_Names[-1]
+
+Transposed_Data <- list.append(Transposed_Data, data.frame(Not_Transposed[1]))
 Not_Transposed <- Not_Transposed[-1]
 
-View(Not_Transposed)
-View(Not_Transposed[[1]])
-
 #Not Transposed data frames
+j <- 0
 for(j in 1:length(Not_Transposed)) {
   glimpse(Not_Transposed[[j]])
-  cat("\n", NT_Names[j], "\n")
+  cat("\n")
+  print("Next Dataframe...")
 }
 
-#Transposed data frames
+#Transposed data frame
+j <- 0
 for(j in 1:length(Transposed_Data)) {
   glimpse(Transposed_Data[[j]])
-  cat("\nNext Dataframe...\n")
+  cat("\n")
+  print("\nNext Dataframe...\n")
 }
 
-T_Names
-print("\nHospital General Information\n")
-glimpse(Transposed_Data[[4]])
+Transposed_Cols <- vector("list", length(Transposed_Data))
+NT_Cols <- vector("list", length(Not_Transposed))
 
-print("\nHVBP Safety\n")
-glimpse(Transposed_Data[[9]])
+#Pick columns from the data frames that don't need to be transposed
+Transposed_Cols[[1]] <- 
+  Transposed_Data[[1]] %>%
+  select(c(1, 2, 12, 16, 20, 24))
+glimpse(Transposed_Cols[[1]])
+
+Transposed_Cols[[2]] <- 
+  Transposed_Data[[2]] %>%
+  select(c(1, 2, 6, 11))
+glimpse(Transposed_Cols[[2]])
+
+Transposed_Cols[[3]] <- 
+  Transposed_Data[[3]] %>%
+  select(c(1, 2, 7, 9, 11, 13, 15, 17, 21))
+glimpse(Transposed_Cols[[3]])
+
+Transposed_Cols[[4]] <- 
+  Transposed_Data[[4]] %>%
+  select(c(1, 2, 13))
+glimpse(Transposed_Cols[[4]])
+
+Transposed_Cols[[5]] <- 
+  Transposed_Data[[5]] %>%
+  select(c(1, 2, 3))
+glimpse(Transposed_Cols[[5]])
+
+Transposed_Cols[[6]] <- 
+  Transposed_Data[[6]] %>%
+  select(c(2, 3, 15, 22, 29, 36, 43))
+glimpse(Transposed_Cols[[6]])
+
+Transposed_Cols[[7]] <- 
+  Transposed_Data[[7]] %>%
+  select(c(2, 3, 15))
+glimpse(Transposed_Cols[[7]])
+
+Transposed_Cols[[8]] <- 
+  Transposed_Data[[8]] %>%
+  select(c(2, 3, 16, 24, 32, 40, 48, 56, 64, 72:74))
+glimpse(Transposed_Cols[[8]])
+
+Transposed_Cols[[9]] <- 
+  Transposed_Data[[9]] %>%
+  select(c(2, 3, 15, 22, 30, 37, 44, 51))
+glimpse(Transposed_Cols[[9]])
+
+Transposed_Cols[[10]] <- 
+  Transposed_Data[[10]] %>%
+  select(c(2, 3, 10:17))
+glimpse(Transposed_Cols[[10]])
+
+Transposed_Cols[[11]] <- 
+  Transposed_Data[[11]] %>%
+  select(c(1, 2, 9, 14, 19, 23, 27, 30, 34, 37, 41, 44, 48, 51, 55, 59, 65, 68, 74, 82, 89))
+glimpse(Transposed_Cols[[11]])
+
+Transposed_Cols[[12]] <- 
+  Transposed_Data[[12]] %>%
+  select(c(1, 2, 11))
+glimpse(Transposed_Cols[[12]])
+
+Transposed_Cols[[13]] <- 
+  Transposed_Data[[13]] %>%
+  select(c(1, 2, 12, 16, 20, 24, 28))
+glimpse(Transposed_Cols[[13]])
+
+Transposed_Cols[[14]] <- 
+  Transposed_Data[[14]] %>%
+  select(c(1, 2, 11))
+glimpse(Transposed_Cols[[14]])
+
+Transposed_Cols[[15]] <- 
+  Transposed_Data[[15]] %>%
+  select(c(1, 2, 11))
+
+glimpse(Transposed_Cols[[15]])
+
+Transposed_Cols[[16]] <- 
+  Transposed_Data[[16]] %>%
+  select(c(1, 2, 8, 10, 14, 18, 20))
+
+glimpse(Transposed_Cols[[16]])
+
+#Pick columns from the data frames that do need to be transposed
+NT_Cols[[1]] <-
+  Not_Transposed[[1]] %>%
+  select(c(1, 2, 8, 9, 10))
+glimpse(NT_Cols[[1]])
+
+NT_Cols[[2]] <-
+  Not_Transposed[[2]] %>%
+  select(c(1, 2, 9, 10, 13))
+glimpse(NT_Cols[[2]])
+
+NT_Cols[[3]] <-
+  Not_Transposed[[3]] %>%
+  select(c(1, 2, 4, 7))
+glimpse(NT_Cols[[3]])
+
+NT_Cols[[4]] <-
+  Not_Transposed[[4]] %>%
+  select(c(1, 2, 9, 12))
+glimpse(NT_Cols[[4]])
+
+NT_Cols[[5]] <-
+  Not_Transposed[[5]] %>%
+  select(c(1, 2, 9, 10, 12))
+glimpse(NT_Cols[[5]])
+
+NT_Cols[[6]] <-
+  Not_Transposed[[6]] %>%
+  select(c(1, 2, 9:11))
+glimpse(NT_Cols[[6]])
+
+NT_Cols[[7]] <-
+  Not_Transposed[[7]] %>%
+  select(c(1, 2, 9, 12))
+glimpse(NT_Cols[[7]])
+
+NT_Cols[[8]] <-
+  Not_Transposed[[8]] %>%
+  select(c(1, 2, 9:11))
+glimpse(NT_Cols[[8]])
+
+NT_Cols[[9]] <-
+  Not_Transposed[[9]] %>%
+  select(c(1, 2, 9, 10, 13))
+glimpse(NT_Cols[[9]])
+
+NT_Cols[[10]] <-
+  Not_Transposed[[10]] %>%
+  select(c(1, 2, 10:12))
+glimpse(NT_Cols[[10]])
+
+NT_Cols[[11]] <-
+  Not_Transposed[[11]] %>%
+  select(c(1, 2, 9, 10, 13))
+glimpse(NT_Cols[[11]])
+
+NT_Cols[[12]] <-
+  Not_Transposed[[12]] %>%
+  select(c(1, 2, 10:12))
+glimpse(NT_Cols[[12]])
+
+NT_Cols[[13]] <-
+  Not_Transposed[[13]] %>%
+  select(c(1, 2, 10, 11, 13))
+glimpse(NT_Cols[[13]])
+
+#Inspecting NT_Cols score variables to determine data types
+NT_Names[[10]]
+glimpse(NT_Cols[[10]])
+sample <- head(NT_Cols[[10]], 100)
+
+sample %>%
+  ggplot(aes(x = Score)) +
+  theme(axis.text.x = element_text(angle = 90, hjust=0)) +
+  geom_bar(fill = 'red')
+
+#Transpose the data contained in NT_Cols
+NT_Done <- vector("list", length(NT_Cols))
+
+#######MAY NOT NEED THIS TALBE - PSI SCORES ARE IN NT_Names[[1]]########
+NT_Done[[1]] <- NT_Cols[[1]] %>%
+  transform(Rate = as.numeric(Rate)) %>%
+  select(-Measure.Name) %>%
+  pivot_wider(names_from = Measure.ID, values_from = Rate)
+glimpse(NT_Done[[1]])
+
+NT_Done[[2]] <- NT_Cols[[2]] %>%
+  transform(Score = as.numeric(Score)) %>%
+  select(-Measure.Name) %>%
+  pivot_wider(names_from = Measure.ID, values_from = Score)
+glimpse(NT_Done[[2]])
+
+NT_Done[[3]] <- NT_Cols[[3]] %>%
+  transform(Excess.Readmission.Ratio = as.numeric(Excess.Readmission.Ratio)) %>%
+  pivot_wider(names_from = Measure.Name, values_from = Excess.Readmission.Ratio)
+glimpse(NT_Done[[3]])
+
+NT_Done[[4]] <- NT_Cols[[4]] %>%
+  transform(Patient.Survey.Star.Rating = as.numeric(Patient.Survey.Star.Rating)) %>%
+  pivot_wider(names_from = HCAHPS.Measure.ID, values_from = Patient.Survey.Star.Rating)
+
+NT_Done[[4]] <- NT_Done[[4]] %>%
+  select(c(1, 2, contains("STAR_RATING")))
+glimpse(NT_Done[[4]])
+
+View(NT_Cols[[5]])
+NT_Done[[5]] <- NT_Cols[[5]] %>%
+  transform(Score = as.numeric(Score)) %>%
+  select(-Measure.Name) %>%
+  pivot_wider(names_from = Measure.ID, values_from = Score)
+
+NT_Done[[5]] <- NT_Done[[5]] %>%
+  select(c(1, 2, contains("SIR")))
+glimpse(NT_Done[[5]])
+glimpse(NT_Done[[5]])
+
+NT_Done[[6]] <- NT_Cols[[6]] %>%
+  transform(Score = as.numeric(Score)) %>%
+  select(-Measure.Name) %>%
+  pivot_wider(names_from = Measure.ID, values_from = Score)
+glimpse(NT_Done[[6]])
+
+#######MAY ONLY NEED THE LAST STAR RATING COLUMN#######
+NT_Done[[7]] <- NT_Cols[[7]] %>%
+  transform(Patient.Survey.Star.Rating = as.numeric(Patient.Survey.Star.Rating)) %>%
+  pivot_wider(names_from = HCAHPS.Measure.ID, values_from = Patient.Survey.Star.Rating)
+
+NT_Done[[7]] <- NT_Done[[7]] %>%
+  select(c(1, 2, contains("STAR_RATING")))
+glimpse(NT_Done[[7]])
+
+#######SMALL DATA TABLE MAY NEED TO OMIT#######
+NT_Done[[8]] <- NT_Cols[[8]] %>%
+  transform(Score = as.numeric(Score)) %>%
+  select(-Measure.Name) %>%
+  pivot_wider(names_from = Measure.ID, values_from = Score)
+
+NT_Done[[8]] <- NT_Done[[8]] %>%
+  select(c(1, 2, contains("SIR")))
+glimpse(NT_Done[[8]])
+
+########SMALL DATA TABLE MAY NEED TO OMIT#######
+NT_Done[[9]] <- NT_Cols[[9]] %>%
+  select(-Measure.Description) %>%
+  pivot_wider(names_from = Measure.ID, values_from = Rate)
+glimpse(NT_Done[[9]])
+
+
+  
