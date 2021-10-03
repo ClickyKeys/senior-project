@@ -226,9 +226,9 @@ NT_Cols[[13]] <-
 glimpse(NT_Cols[[13]])
 
 #Inspecting NT_Cols score variables to determine data types
-NT_Names[[10]]
-glimpse(NT_Cols[[10]])
-sample <- head(NT_Cols[[10]], 100)
+NT_Names[[13]]
+glimpse(NT_Cols[[12]])
+sample <- head(NT_Cols[[12]], 500)
 
 sample %>%
   ggplot(aes(x = Score)) +
@@ -306,5 +306,32 @@ NT_Done[[9]] <- NT_Cols[[9]] %>%
   pivot_wider(names_from = Measure.ID, values_from = Rate)
 glimpse(NT_Done[[9]])
 
+NT_Done[[10]] <- NT_Cols[[10]] %>%
+  select(-Measure.Name) %>%
+  pivot_wider(names_from = Measure.ID, values_from = Score)
 
-  
+######Convert char score values to a scale of 1 - 4 where low = 1, med = 2, high = 3, very high = 4#######
+NT_Done[[10]] <- NT_Done[[10]] %>%
+  mutate_at(4:length(NT_Done[[10]]), as.numeric)
+glimpse(NT_Done[[10]])
+
+NT_Done[[11]] <- NT_Cols[[11]] %>%
+  transform(Score = as.numeric(Score)) %>%
+  select(-Measure.Name) %>%
+  pivot_wider(names_from = Measure.ID, values_from = Score)
+glimpse(NT_Done[[11]])
+
+NT_Done[[12]] <- NT_Cols[[12]] %>%
+  transform(Score = as.numeric(Score)) %>%
+  select(-Measure.Name) %>%
+  pivot_wider(names_from = Measure.ID, values_from = Score)
+glimpse(NT_Done[[12]])
+
+NT_Done[[13]] <- NT_Cols[[13]] %>%
+  select(-Measure.Name) %>%
+  pivot_wider(names_from = Measure.ID, values_from = Score)
+
+######Convert char score values to a scale of 1 - 4 where low = 1, med = 2, high = 3, very high = 4#######
+NT_Done[[13]] <- NT_Done[[13]] %>%
+  mutate_at(4:length(NT_Done[[13]]), as.numeric)
+glimpse(NT_Done[[13]])
