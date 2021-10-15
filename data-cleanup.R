@@ -73,7 +73,7 @@ for(j in 1:length(Transposed_Data)) {
   print("\nNext Dataframe...\n")
 }
 
-Transposed_Cols <- vector("list", (length(Transposed_Data)-2))
+Transposed_Cols <- vector("list", length(Transposed_Data))
 NT_Cols <- vector("list", length(Not_Transposed))
 
 #Pick columns from the data frames that don't need to be transposed
@@ -181,23 +181,24 @@ Transposed_Cols[[13]] <- Transposed_Cols[[13]] %>%
   mutate_at(2:length(Transposed_Cols[[13]]), as.numeric)
 glimpse(Transposed_Cols[[13]])
 
-# ###SMALL DATA SET, MAY ELIMINATE###
-# Transposed_Cols[[14]] <- Transposed_Data[[14]] %>%
-#   select(c(1, 11))
-# glimpse(Transposed_Cols[[14]])
-# 
-# ###SMALL DATA SET, MAY ELIMINATE###
-# Transposed_Cols[[15]] <- Transposed_Data[[15]] %>%
-#   select(c(1, 11))
-# glimpse(Transposed_Cols[[15]])
+print(T_Names[[15]])
+###SMALL DATA SET, MAY ELIMINATE###
+Transposed_Cols[[14]] <- Transposed_Data[[14]] %>%
+  select(c(1, 11))
+glimpse(Transposed_Cols[[14]])
+
+###SMALL DATA SET, MAY ELIMINATE###
+Transposed_Cols[[15]] <- Transposed_Data[[15]] %>%
+  select(c(1, 11))
+glimpse(Transposed_Cols[[15]])
 
 ###STRANGE FACILITY NAMES, INVESTIGATE###
-Transposed_Cols[[14]] <- Transposed_Data[[16]] %>%
+Transposed_Cols[[16]] <- Transposed_Data[[16]] %>%
   select(c(2, 8, 10, 14, 18, 20))
 
-Transposed_Cols[[14]] <- Transposed_Cols[[14]] %>%
-  mutate_at(2:length(Transposed_Cols[[14]]), as.numeric)
-glimpse(Transposed_Cols[[14]])
+Transposed_Cols[[16]] <- Transposed_Cols[[16]] %>%
+  mutate_at(2:length(Transposed_Cols[[16]]), as.numeric)
+glimpse(Transposed_Cols[[16]])
 
 #Pick columns from the data frames that do need to be transposed
 NT_Cols[[1]] <- Not_Transposed[[1]] %>%
@@ -305,6 +306,7 @@ NT_Done[[6]] <- NT_Cols[[6]] %>%
   pivot_wider(names_from = Measure.ID, values_from = Score)
 glimpse(NT_Done[[6]])
 
+#####ELIMINATING FOR NOW DUE TO SMALL DATA#####
 #######MAY ONLY NEED THE LAST STAR RATING COLUMN#######
 NT_Done[[7]] <- NT_Cols[[7]] %>%
   transform(Patient.Survey.Star.Rating = as.numeric(Patient.Survey.Star.Rating)) %>%
@@ -346,6 +348,7 @@ NT_Done[[11]] <- NT_Cols[[11]] %>%
   pivot_wider(names_from = Measure.ID, values_from = Score)
 glimpse(NT_Done[[11]])
 
+#####ELIMINATING FOR NOW DUE TO SMALL DATA#####
 NT_Done[[12]] <- NT_Cols[[12]] %>%
   transform(Score = as.numeric(Score)) %>%
   select(-Measure.Name) %>%
@@ -378,16 +381,11 @@ for(i in 1:length(Transposed_Cols)) {
 
 #Remove leading 0 from some facility ID's
 #make a function?
-Transposed_Cols[[4]]$Facility.ID <- Transposed_Cols[[4]]$Facility.ID %>%
-  trimws("left", "0")
+for(i in 1:length(NT_Done)) {
+  glimpse(NT_Done[[i]])
+}
 
 NT_Done[[2]]$Facility.ID <- NT_Done[[2]]$Facility.ID %>%
-  trimws("left", "0")
-
-NT_Done[[4]]$Facility.ID <- NT_Done[[4]]$Facility.ID %>%
-  trimws("left", "0")
-
-NT_Done[[5]]$Facility.ID <- NT_Done[[5]]$Facility.ID %>%
   trimws("left", "0")
 
 NT_Done[[10]]$Facility.ID <- NT_Done[[10]]$Facility.ID %>%
@@ -396,28 +394,34 @@ NT_Done[[10]]$Facility.ID <- NT_Done[[10]]$Facility.ID %>%
 NT_Done[[11]]$Facility.ID <- NT_Done[[11]]$Facility.ID %>%
   trimws("left", "0")
 
-#Join tables 
-joined = full_join(x = NT_Done[[1]], y = NT_Done[[2]], by = c("Facility.ID" = "Facility.ID"))
+#Remove unneeded datasets before joining tables
 
-View(joined)
-glimpse(joined)
+NT_Done_Cluster <- vector("list", length(NT_Cols)-5)
+Transposed_Cluster <- vector("list", length(Transposed_Cols)-3)
+
+NT_Done_Cluster <- NT_Done[- c(7, 8, 9, 12, 13)]
+Transposed_Cluster <- Transposed_Cols[- c(4, 14, 15)]
+
+#Join tables 
+glimpse(NT_Done_Cluster[[1]])
+joined = full_join(x = NT_Done_Cluster[[1]], y = NT_Done_Cluster[[2]], by = c("Facility.ID" = "Facility.ID"))
 
 join_tables <- function(t1, t2) {
   joined = full_join(x = t1, y = t2, by = c("Facility.ID" = "Facility.ID"))
 }
 
-for(i in 3:length(NT_Done)) {
-  joined <- join_tables(joined, NT_Done[[i]])
+for(i in 3:length(NT_Done_Cluster)) {
+  joined <- join_tables(joined, NT_Done_Cluster[[i]])
+  print(paste0("successfully joined data set ", i))
+}
+
+for(i in 1:length(Transposed_Cluster)) {
+  joined <- join_tables(joined, Transposed_Cluster[[i]])
   print(paste0("successfully joined data set ", i))
 }
 
 glimpse(joined)
-
-for(i in 1:length(Transposed_Cols)) {
-  joined <- join_tables(joined, Transposed_Cols[[i]])
-  print(paste0("successfully joined data set ", i))
-}
-
-#removed facility name
-#check distribution of measures with geom_histogram
+ 
+#Prepare the data table for clustering
+#Remove 
 
