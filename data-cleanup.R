@@ -3,7 +3,7 @@
 #https://stackoverflow.com/questions/19791760/adding-data-frames-as-list-elements-using-for-loop
 
 #importing and cleaning data
-pacman::p_load(tidyverse, rlist, skimr)
+pacman::p_load(tidyverse, rlist, skimr, gmodels)
 
 #import datasets - starting with first one as a test
 #make lists for the different data conditions
@@ -103,18 +103,19 @@ Transposed_Cols[[3]] <- Transposed_Cols[[3]] %>%
 glimpse(Transposed_Cols[[3]])
 
 Transposed_Cols[[4]] <- Transposed_Data[[4]] %>%
-  select(c(1, 13))
+  select(c(1, 9, 13))
 glimpse(Transposed_Cols[[4]])
 
 Transposed_Cols[[4]] <- Transposed_Cols[[4]] %>%
   mutate_at(3, as.numeric)
 
 Transposed_Cols[[5]] <- Transposed_Data[[5]] %>%
-  select(c(1, 2, 3))
+  select(c(1, 3))
 glimpse(Transposed_Cols[[5]])
 
 Transposed_Cols[[5]] <- Transposed_Cols[[5]] %>%
-  mutate_at(3, as.numeric)
+  mutate_at(2, as.numeric) %>%
+  rename(`MSPB-1` = Value)
 
 Transposed_Cols[[6]] <- Transposed_Data[[6]] %>%
   select(c(2, 15, 22, 29, 36, 43))
@@ -126,13 +127,13 @@ Transposed_Cols[[6]] <- Transposed_Cols[[6]] %>%
 glimpse(Transposed_Cols[[6]])
 
 Transposed_Cols[[7]] <- Transposed_Data[[7]] %>%
-  select(c(2, 3, 15))
+  select(c(2, 15))
 glimpse(Transposed_Cols[[7]])
 
 #scores are written as "# out of 10" - remove " out of 10" and change to numeric
 Transposed_Cols[[7]] <- Transposed_Cols[[7]] %>%
-  mutate_at(3, ~ str_replace(., " out of 10", "")) %>%
-  mutate_at(3, as.numeric)
+  mutate_at(2, ~ str_replace(., " out of 10", "")) %>%
+  mutate_at(2, as.numeric)
 glimpse(Transposed_Cols[[7]])
 
 Transposed_Cols[[8]] <- Transposed_Data[[8]] %>%
@@ -171,7 +172,8 @@ Transposed_Cols[[12]] <- Transposed_Data[[12]] %>%
   select(c(1, 11))
 
 Transposed_Cols[[12]] <- Transposed_Cols[[12]] %>%
-  mutate_at(2, as.numeric)
+  mutate_at(2, as.numeric) %>%
+  rename(`MSPB-1` = Score)
 glimpse(Transposed_Cols[[12]])
 
 Transposed_Cols[[13]] <- Transposed_Data[[13]] %>%
@@ -181,7 +183,6 @@ Transposed_Cols[[13]] <- Transposed_Cols[[13]] %>%
   mutate_at(2:length(Transposed_Cols[[13]]), as.numeric)
 glimpse(Transposed_Cols[[13]])
 
-print(T_Names[[15]])
 ###SMALL DATA SET, MAY ELIMINATE###
 Transposed_Cols[[14]] <- Transposed_Data[[14]] %>%
   select(c(1, 11))
@@ -382,10 +383,19 @@ for(i in 1:length(Transposed_Cols)) {
 #Remove leading 0 from some facility ID's
 #make a function?
 for(i in 1:length(NT_Done)) {
-  glimpse(NT_Done[[i]])
+  glimpse(Transposed_Cols[[i]])
 }
 
+Transposed_Cols[[4]]$Facility.ID <- Transposed_Cols[[4]]$Facility.ID %>%
+  trimws("left", "0")
+
 NT_Done[[2]]$Facility.ID <- NT_Done[[2]]$Facility.ID %>%
+  trimws("left", "0")
+
+NT_Done[[4]]$Facility.ID <- NT_Done[[4]]$Facility.ID %>%
+  trimws("left", "0")
+
+NT_Done[[5]]$Facility.ID <- NT_Done[[5]]$Facility.ID %>%
   trimws("left", "0")
 
 NT_Done[[10]]$Facility.ID <- NT_Done[[10]]$Facility.ID %>%
@@ -394,34 +404,63 @@ NT_Done[[10]]$Facility.ID <- NT_Done[[10]]$Facility.ID %>%
 NT_Done[[11]]$Facility.ID <- NT_Done[[11]]$Facility.ID %>%
   trimws("left", "0")
 
-#Remove unneeded datasets before joining tables
-
-NT_Done_Cluster <- vector("list", length(NT_Cols)-5)
-Transposed_Cluster <- vector("list", length(Transposed_Cols)-3)
-
-NT_Done_Cluster <- NT_Done[- c(7, 8, 9, 12, 13)]
-Transposed_Cluster <- Transposed_Cols[- c(4, 14, 15)]
-
 #Join tables 
-glimpse(NT_Done_Cluster[[1]])
-joined = full_join(x = NT_Done_Cluster[[1]], y = NT_Done_Cluster[[2]], by = c("Facility.ID" = "Facility.ID"))
+joined = full_join(x = NT_Done[[1]], y = NT_Done[[2]], by = c("Facility.ID" = "Facility.ID"))
 
 join_tables <- function(t1, t2) {
   joined = full_join(x = t1, y = t2, by = c("Facility.ID" = "Facility.ID"))
 }
 
-for(i in 3:length(NT_Done_Cluster)) {
-  joined <- join_tables(joined, NT_Done_Cluster[[i]])
+for(i in 3:length(NT_Done)) {
+  joined <- join_tables(joined, NT_Done[[i]])
   print(paste0("successfully joined data set ", i))
 }
 
-for(i in 1:length(Transposed_Cluster)) {
-  joined <- join_tables(joined, Transposed_Cluster[[i]])
+for(i in 1:length(Transposed_Cols)) {
+  joined <- join_tables(joined, Transposed_Cols[[i]])
   print(paste0("successfully joined data set ", i))
 }
 
 glimpse(joined)
- 
-#Prepare the data table for clustering
-#Remove 
 
+#78% total missing data - This is concerning
+(sum(is.na(joined))/prod(dim(joined)))*100
+
+#Checking General Hospital Information dataset to determine which measures have the most values by hospital type
+CrossTable(Transposed_Data[[4]]$Hospital.Type, Transposed_Data[[4]]$Count.of.Facility.READM.Measures)
+
+#Select measures for Acute Care Hospitals only 
+joined_ACH <- joined %>%
+  filter(Hospital.Type == "Acute Care Hospitals")
+glimpse(joined_ACH)
+
+#Check percentage of missing data for each column (amount of missing data per measure)
+for(i in 1:length(joined_ACH)) {
+  print((sum(is.na(joined_ACH[i]))/prod(dim(joined_ACH[i])))*100)
+}
+
+#find which columns have < 25% missing data and append those to a list
+measures <- NULL
+for(i in 1:length(joined_ACH)) {
+  if((sum(is.na(joined_ACH[i]))/prod(dim(joined_ACH[i])))*100 < 25) {
+    measures <- list.append(measures, i)
+  }
+}
+print(measures)
+
+#Extract the columns with <25% missing data, remove duplicate measures, and remove hospital overall star rating and hospital type
+joined_ACH_final <- joined_ACH %>%
+  select(c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 16, 17, 18, 20, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 35, 36, 37, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 56, 57,  81,  91,  92,  94,  95,  97,  98,  99, 102, 105, 106, 108,
+           109, 131, 133, 136, 137, 138, 139, 140, 142, 143, 144, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 162, 163, 164, 165, 168, 169, 170, 190)) %>%
+  select(- c("PSI_03.y", "PSI_06.y", "PSI_08.y", "PSI_09.y", "PSI_10.y", "PSI_11.y", "PSI_12.y", "PSI_13.y", "PSI_14.y", "PSI_15.y", "PSI_90.y", "Hospital.overall.rating", "Hospital.Type", "MSPB-1.y"))
+glimpse(joined_ACH_final)
+
+#14% total missing data from the finishe dataset
+(sum(is.na(joined_ACH_final))/prod(dim(joined_ACH_final)))*100
+
+#nearly all columns have <20% missing data 
+for(i in 1:length(joined_ACH_final)) {
+  print((sum(is.na(joined_ACH_final[i]))/prod(dim(joined_ACH_final[i])))*100)
+}
+
+write_csv(joined_final, "data/Measures_by_Hospital_Acute_Care.csv")
