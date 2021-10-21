@@ -142,7 +142,7 @@ Transposed_Cols[[8]] <- Transposed_Data[[8]] %>%
 #scores are written as "# out of 10" - remove " out of 10" and change to numeric
 Transposed_Cols[[8]] <- Transposed_Cols[[8]] %>%
   mutate_at(2:9, ~ str_replace(., " out of 10", "")) %>%
-  mutate_at(3:length(Transposed_Cols[[8]]), as.numeric)
+  mutate_at(2:length(Transposed_Cols[[8]]), as.numeric)
 glimpse(Transposed_Cols[[8]])
 
 Transposed_Cols[[9]] <- Transposed_Data[[9]] %>%
@@ -463,4 +463,11 @@ for(i in 1:length(joined_ACH_final)) {
   print((sum(is.na(joined_ACH_final[i]))/prod(dim(joined_ACH_final[i])))*100)
 }
 
-write_csv(joined_final, "data/Measures_by_Hospital_Acute_Care.csv")
+write_csv(joined_ACH_final, "data/Measures_by_Hospital_Acute_Care_New.csv")
+
+glimpse(Transposed_Cols[[4]])
+Transposed_Cols[[4]] %>%
+  na.omit() %>%
+  ggplot() +
+  geom_histogram(mapping = aes(y = Hospital.overall.rating), binwidth = 1) +
+  coord_flip()
