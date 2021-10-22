@@ -1,28 +1,38 @@
 #install.packages("VIM")
-install.packages("sjPlot")
+#install.packages("sjPlot")
 
 pacman::p_load(tidyverse, rlist, skimr, caret, VIM, sjPlot, factoextra, NbClust)
 
-cluster <- read_csv("data/Measures_by_Hospital_Acute_Care_New.csv")
 
+##### Remove missing values and normalize the dataframe #####
+cluster <- read_csv("data/Measures_by_Hospital_Acute_Care_New.csv")
 glimpse(cluster)
 
-#normalize the measure values on a scale from 0 to 1 using min-max scaling
-process = preProcess(as.data.frame(cluster[2:length(cluster)]), method=c("range"))
-cluster_norm <- predict(process, as.data.frame(cluster[1:length(cluster)]))
-glimpse(cluster_norm)
+#impute NA values using KNN method
+kVal = floor(sqrt(nrow(cluster)))
 
-#resolve missing values using KNN imputation
-kVal = floor(sqrt(nrow(cluster_norm)))
+cluster <- cluster %>%
+  kNN(variable = 1:length(cluster), k = kVal, imp_var = FALSE)
+glimpse(cluster)
 
-cluster_norm <- cluster_norm %>%
-  kNN(variable = 1:length(cluster_norm), k = kVal, imp_var = FALSE)
+#new data frame for the dataframe with no NA values
+cluster_NAR <- cluster
 
-glimpse(cluster_norm)
+#manually normalize data using the min-max method
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
 
-#implement clustering
+for(i in 2:length(cluster_NAR)) {
+  cluster_NAR[i] <- normalize(cluster_NAR[i])
+}
+glimpse(cluster_NAR)
 
-cluster_norm <- cluster_norm[2:length(cluster_norm)]
+write_csv(cluster_NAR, "data/cluster_normalized.csv")
+
+##### implement clustering #####
+
+cluster_norm <- read_csv("data/cluster_normalized.csv")
 
 #heirarchical method
 dist_matrix <- dist(cluster_norm, method = 'euclidean')
@@ -62,7 +72,27 @@ fviz_nbclust(cluster_norm, kmeans,
 ) +
   labs(subtitle = "Gap statistic method")
 
+nbclust_out <- NbClust(
+  data = cluster_NAR,
+  distance = "euclidean",
+  min.nc = 2, # minimum number of clusters
+  max.nc = 5, # maximum number of clusters
+  method = "kmeans" # one of: "ward.D", "ward.D2", "single", "complete", "average", "mcquitty", "median", "centroid", "kmeans"
+)
+
 #implement and plot clustering
-k2 <- kmeans(cluster_norm, centers = 3, nstart = 25)
-str(k2)
+glimpse(cluster_norm)
+
+cluster_norm <- cluster_norm[50:length(cluster_norm)]
+k2 <- kmeans(cluster_norm, centers = 3, nstart = 50)
 fviz_cluster(k2, data = cluster_norm)
+print(k2$cluster)
+
+# #check normalization scale to non-normalized scale
+# cluster %>%
+#   ggplot() +
+#   geom_histogram(mapping = aes(y = Total.Performance.Score, binwidth = 5))
+# 
+# cluster_norm %>%
+#   ggplot() +
+#   geom_histogram(mapping = aes(y = Total.Performance.Score , binwidth = 5))
