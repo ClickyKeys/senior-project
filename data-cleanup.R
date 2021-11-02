@@ -5,8 +5,7 @@
 #importing and cleaning data
 pacman::p_load(tidyverse, rlist, skimr, gmodels)
 
-#import datasets - starting with first one as a test
-#make lists for the different data conditions
+#import datasets - make lists for the different data conditions
 Hospital_Data <- list.files(path = "C:/Users/lkn56/Desktop/School Stuff/Fall 2021/CSCI 487/hospitals_current_data/EVALUATED", pattern = "*.csv", full.names = TRUE)
 names(Hospital_Data) <- list.files(path = "C:/Users/lkn56/Desktop/School Stuff/Fall 2021/CSCI 487/hospitals_current_data/EVALUATED", pattern = "*.csv", full.names = FALSE)
 
@@ -137,11 +136,11 @@ Transposed_Cols[[7]] <- Transposed_Cols[[7]] %>%
 glimpse(Transposed_Cols[[7]])
 
 Transposed_Cols[[8]] <- Transposed_Data[[8]] %>%
-  select(c(2, 16, 24, 32, 40, 48, 56, 64, 72:74))
+  select(c(2, 16, 24, 32, 40, 48, 56, 64))
 
 #scores are written as "# out of 10" - remove " out of 10" and change to numeric
 Transposed_Cols[[8]] <- Transposed_Cols[[8]] %>%
-  mutate_at(2:9, ~ str_replace(., " out of 10", "")) %>%
+  mutate_at(2:8, ~ str_replace(., " out of 10", "")) %>%
   mutate_at(2:length(Transposed_Cols[[8]]), as.numeric)
 glimpse(Transposed_Cols[[8]])
 
@@ -155,7 +154,7 @@ Transposed_Cols[[9]] <- Transposed_Cols[[9]] %>%
 glimpse(Transposed_Cols[[9]])
 
 Transposed_Cols[[10]] <- Transposed_Data[[10]] %>%
-  select(c(2, 10:17))
+  select(c(2, 10:16))
 
 Transposed_Cols[[10]] <- Transposed_Cols[[10]] %>%
   mutate_at(2:length(Transposed_Cols[[10]]), as.numeric)
@@ -215,7 +214,7 @@ NT_Cols[[3]] <- Not_Transposed[[3]] %>%
 glimpse(NT_Cols[[3]])
 
 NT_Cols[[4]] <- Not_Transposed[[4]] %>%
-  select(c(1, 9, 12))
+  select(c(1, 9, 16))
 glimpse(NT_Cols[[4]])
 
 NT_Cols[[5]] <- Not_Transposed[[5]] %>%
@@ -227,7 +226,7 @@ NT_Cols[[6]] <- Not_Transposed[[6]] %>%
 glimpse(NT_Cols[[6]])
 
 NT_Cols[[7]] <- Not_Transposed[[7]] %>%
-  select(c(1, 9, 12))
+  select(c(1, 9, 16))
 glimpse(NT_Cols[[7]])
 
 NT_Cols[[8]] <- Not_Transposed[[8]] %>%
@@ -284,12 +283,14 @@ NT_Done[[3]] <- NT_Cols[[3]] %>%
   pivot_wider(names_from = Measure.Name, values_from = Excess.Readmission.Ratio)
 glimpse(NT_Done[[3]])
 
+glimpse(NT_Cols[[4]])
 NT_Done[[4]] <- NT_Cols[[4]] %>%
-  transform(Patient.Survey.Star.Rating = as.numeric(Patient.Survey.Star.Rating)) %>%
-  pivot_wider(names_from = HCAHPS.Measure.ID, values_from = Patient.Survey.Star.Rating)
+  transform(HCAHPS.Linear.Mean.Value = as.numeric(HCAHPS.Linear.Mean.Value)) %>%
+  pivot_wider(names_from = HCAHPS.Measure.ID, values_from = HCAHPS.Linear.Mean.Value)
 
 NT_Done[[4]] <- NT_Done[[4]] %>%
-  select(c(1, 2, contains("STAR_RATING")))
+  select(c(1, 2, contains("LINEAR"))) %>%
+  select(c(-12))
 glimpse(NT_Done[[4]])
 
 NT_Done[[5]] <- NT_Cols[[5]] %>%
@@ -307,14 +308,14 @@ NT_Done[[6]] <- NT_Cols[[6]] %>%
   pivot_wider(names_from = Measure.ID, values_from = Score)
 glimpse(NT_Done[[6]])
 
-#####ELIMINATING FOR NOW DUE TO SMALL DATA#####
 #######MAY ONLY NEED THE LAST STAR RATING COLUMN#######
 NT_Done[[7]] <- NT_Cols[[7]] %>%
-  transform(Patient.Survey.Star.Rating = as.numeric(Patient.Survey.Star.Rating)) %>%
-  pivot_wider(names_from = HCAHPS.Measure.ID, values_from = Patient.Survey.Star.Rating)
+  transform(HCAHPS.Linear.Mean.Value = as.numeric(HCAHPS.Linear.Mean.Value)) %>%
+  pivot_wider(names_from = HCAHPS.Measure.ID, values_from = HCAHPS.Linear.Mean.Value)
 
 NT_Done[[7]] <- NT_Done[[7]] %>%
-  select(c(1, 2, contains("STAR_RATING")))
+  select(c(1, 2, contains("LINEAR"))) %>%
+  select(c(-12))
 glimpse(NT_Done[[7]])
 
 #######SMALL DATA TABLE MAY NEED TO OMIT#######
@@ -383,7 +384,7 @@ for(i in 1:length(Transposed_Cols)) {
 #Remove leading 0 from some facility ID's
 #make a function?
 for(i in 1:length(NT_Done)) {
-  glimpse(Transposed_Cols[[i]])
+  glimpse(NT_Done[[i]])
 }
 
 Transposed_Cols[[4]]$Facility.ID <- Transposed_Cols[[4]]$Facility.ID %>%
@@ -427,35 +428,36 @@ glimpse(joined)
 (sum(is.na(joined))/prod(dim(joined)))*100
 
 #Checking General Hospital Information dataset to determine which measures have the most values by hospital type
-CrossTable(Transposed_Data[[4]]$Hospital.Type, Transposed_Data[[4]]$Count.of.Facility.READM.Measures)
+CrossTable(Transposed_Data[[4]]$Hospital.Type, Transposed_Data[[4]]$Count.of.Facility.MORT.Measures)
 
 #Select measures for Acute Care Hospitals only 
 joined_ACH <- joined %>%
   filter(Hospital.Type == "Acute Care Hospitals")
-glimpse(joined_ACH)
 
 #Check percentage of missing data for each column (amount of missing data per measure)
 for(i in 1:length(joined_ACH)) {
   print((sum(is.na(joined_ACH[i]))/prod(dim(joined_ACH[i])))*100)
 }
+glimpse(joined_ACH)
 
 #find which columns have < 25% missing data and append those to a list
 measures <- NULL
 for(i in 1:length(joined_ACH)) {
-  if((sum(is.na(joined_ACH[i]))/prod(dim(joined_ACH[i])))*100 < 25) {
+  if((sum(is.na(joined_ACH[i]))/prod(dim(joined_ACH[i])))*100 < 20) {
     measures <- list.append(measures, i)
   }
 }
 print(measures)
 
-#Extract the columns with <25% missing data, remove duplicate measures, and remove hospital overall star rating and hospital type
+glimpse(joined_ACH[54])
+
 joined_ACH_final <- joined_ACH %>%
-  select(c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 16, 17, 18, 20, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 35, 36, 37, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 56, 57,  81,  91,  92,  94,  95,  97,  98,  99, 102, 105, 106, 108,
-           109, 131, 133, 136, 137, 138, 139, 140, 142, 143, 144, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 162, 163, 164, 165, 168, 169, 170, 190)) %>%
-  select(- c("PSI_03.y", "PSI_06.y", "PSI_08.y", "PSI_09.y", "PSI_10.y", "PSI_11.y", "PSI_12.y", "PSI_13.y", "PSI_14.y", "PSI_15.y", "PSI_90.y", "Hospital.overall.rating", "Hospital.Type", "MSPB-1.y"))
+select(c(1, 2, 3,   4,   5,   6,   7,   8,  11,  12,  16,  17,  18,  20,  22,  23,  24,  25,  26,  27,  30,  31,  35,  36,  37,  39,  40,  41,  42,  43,  44,  45,  46,  47,  54,  55,  77,  87,
+         88,  90,  93,  94,  95,  98, 101, 102, 104, 105, 127, 132, 133, 134, 135, 136, 139, 140, 142, 143, 144, 145, 146, 147, 148, 149, 156, 157, 158, 161, 162, 182,)) %>%
+  select(- c("PSI_03.y", "PSI_06.y", "PSI_08.y", "PSI_09.y", "PSI_10.y", "PSI_11.y", "PSI_12.y",  "PSI_15.y", "PSI_90.y", "Hospital.Type", "MSPB-1.y"))
 glimpse(joined_ACH_final)
 
-#14% total missing data from the finishe dataset
+#13% total missing data from the finishe dataset
 (sum(is.na(joined_ACH_final))/prod(dim(joined_ACH_final)))*100
 
 #nearly all columns have <20% missing data 
@@ -463,11 +465,5 @@ for(i in 1:length(joined_ACH_final)) {
   print((sum(is.na(joined_ACH_final[i]))/prod(dim(joined_ACH_final[i])))*100)
 }
 
-write_csv(joined_ACH_final, "data/Measures_by_Hospital_Acute_Care_New.csv")
+write_csv(joined_ACH_final, "data/Measures_by_Hospital_Acute_Care_V2.csv")
 
-glimpse(Transposed_Cols[[4]])
-Transposed_Cols[[4]] %>%
-  na.omit() %>%
-  ggplot() +
-  geom_histogram(mapping = aes(y = Hospital.overall.rating), binwidth = 1) +
-  coord_flip()
