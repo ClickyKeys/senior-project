@@ -1,7 +1,8 @@
 #install.packages("VIM")
 #install.packages("sjPlot")
+install.packages("fossil")
 
-pacman::p_load(tidyverse, rlist, skimr, caret, VIM, sjPlot, factoextra, NbClust, cluster, rgl)
+pacman::p_load(tidyverse, rlist, skimr, caret, VIM, sjPlot, factoextra, NbClust, cluster, rgl, fossil)
 
 ##### Remove missing values and normalize the dataframe #####
 #cluster <- read_csv("data/Measures_by_Hospital_Acute_Care_New.csv")
@@ -27,29 +28,61 @@ cluster_NAR <- cluster_NAR %>%
   kNN(variable = 2:length(cluster_NAR), k = kVal, imp_var = FALSE)
 glimpse(cluster_NAR)
 
-write_csv(cluster_NAR, "data/cluster_normalized_V2.csv")
+write_csv(cluster_NAR, "data/cluster_normalized.csv")
 
 ##### implement clustering #####
 
-cluster_norm <- read_csv("data/cluster_normalized_V2.csv")
+cluster_norm <- read_csv("data/cluster_normalized.csv")
 glimpse(cluster_norm)
 
-#group measures
-# cluster_norm$MORT <- rowMeans(subset(cluster_norm, select = c(2:13, 43, 47:48)))
-# cluster_norm$READM <- rowMeans(subset(cluster_norm, select = c(14:16, 35:36, 39:42)))
-# cluster_norm$HCAHPS <- rowMeans(subset(cluster_norm, select = c(17:26)))
-# cluster_norm$HVBP <- rowMeans(subset(cluster_norm, select = c(50:64)))
-# cluster_norm$HVBP_Total <- rowMeans(subset(cluster_norm, select = c(65)))
-# cluster_norm$HAI <- rowMeans(subset(cluster_norm, select = c(28)))
-# cluster_norm$OP <- rowMeans(subset(cluster_norm, select = c(29:30, 37:38)))
-# cluster_norm$HAC <- rowMeans(subset(cluster_norm, select = c(44)))
-# cluster_norm$MSPB <- rowMeans(subset(cluster_norm, select = c(46, 49)))
-
 #separate the Facility ID's from the variables for clustering
-rownames(cluster_norm) <- cluster_norm$Facility.ID
+rownames(cluster_norm_vars) <- cluster_norm$Facility.ID
+
 cluster_norm_vars <- cluster_norm %>%
-  select(c(-"Hospital.overall.rating", -"Facility.ID")) 
+  select(c(-"Total.Performance.Score", -"Overall.Rating.of.Hospital.Dimension.Score", -"HCAHPS.Base.Score", -"HCAHPS.Consistency.Score",
+           -"Facility.ID", -"Total.HAC.Score", -"H_HSP_RATING_STAR_RATING.x", -"H_STAR_RATING.x", -"Weighted.Normalized.Clinical.Outcomes.Domain.Score",
+           -"Unweighted.Person.and.Community.Engagement.Domain.Score", -"Weighted.Person.and.Community.Engagement.Domain.Score", -"Unweighted.Normalized.Efficiency.and.Cost.Reduction.Domain.Score",
+           -"Weighted.Efficiency.and.Cost.Reduction.Domain.Score")) 
+
 glimpse(cluster_norm_vars)
+
+set.seed(123)
+
+# k-means clustering method - normalized
+#principle component analysis to see which variables are responsible for most variance
+cluster.pca <- prcomp(cluster_norm_vars, center = TRUE, scale. = TRUE)
+View(cluster.pca$x)
+fviz_eig(cluster.pca)
+
+cluster_nomr_vars <- as.data.frame(cluster.pca$x) %>%
+  select(c(PC1, PC2))
+
+#evaluate strongly correlated variables for dimensionality reduction
+fviz_pca_var(cluster.pca,
+             col.var = "contrib", # Color by contributions to the PC
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE,
+             max.overalps = 20
+)
+
+#results for variables
+cluster.var <- get_pca_var(cluster.pca)
+groups <- as.data.frame(cluster.var$coord) %>%
+  transform(Measures = row.names(cluster.var$coord)) %>%
+  select(c(Measures, Dim.1, Dim.2)) %>%
+  arrange(Dim.1, Dim.2)
+
+glimpse(cluster_norm_vars)
+
+#reduce dimensionality by grouping based on similarity
+cluster_norm_vars$HCAHPS <- rowMeans(subset(cluster_norm_vars, select = c(16:24, 46:52)))
+cluster_norm_vars$SEP <- rowMeans(subset(cluster_norm_vars, select = c(28:31)))
+cluster_norm_vars$MORT <- rowMeans(subset(cluster_norm_vars, select = c(1:12, 40)))
+cluster_norm_vars$READM <- rowMeans(subset(cluster_norm_vars, select = c(13:15,32:33, 36:39)))
+cluster_norm_vars$OP <- rowMeans(subset(cluster_norm_vars, select = c(26:27, 34:35)))
+
+cluster_norm_vars <- cluster_norm_vars %>%
+  select(c(25, 41:45, 53:57))
 
 #kmeans method
 # methods to determine k:
@@ -57,7 +90,6 @@ glimpse(cluster_norm_vars)
 fviz_nbclust(cluster_norm_vars, kmeans, method = "wss") +
   labs(subtitle = "Elbow method") # add subtitle
 
-set.seed(123)
 #gap stat
 MyKmeansFUN <- function(x,k) list(cluster=kmeans(x, k, iter.max=100))
 
@@ -73,46 +105,18 @@ nbclust_out <- NbClust(
   data = cluster_norm_vars,
   distance = "euclidean",
   min.nc = 2, # minimum number of clusters
-  max.nc = 5, # maximum number of clusters
+  max.nc = 6, # maximum number of clusters
   method = "kmeans" # one of: "ward.D", "ward.D2", "single", "complete", "average", "mcquitty", "median", "centroid", "kmeans"
 )
- 
-set.seed(123)
-
-# k-means clustering method - normalized
-#principle component analysis to see which variables are responsible for most variance
-cluster.pca <- prcomp(cluster_norm_vars, center = TRUE, scale. = TRUE)
-cluster.pca$center
-
-importance <- as.data.frame(pca$importance[2, ]) %>%
-  mutate(names = names) %>%
-  rename(PC = `pca$importance[2, ]`) %>%
-  mutate(PC = PC*100)
-
-#plot importance to show principle components with most variance
-#Geometrically speaking, principal components represent the directions of the data that explain a maximal amount of variance, 
-#that is to say, the lines that capture most information of the data.
-importance %>%
-  ggplot() +
-  geom_bar(mapping = aes(x = reorder(x = names, PC), y = PC, fill = names), stat = "identity") +
-  theme(plot.title = element_text(hjust = 0.5)) +
-  scale_y_continuous(breaks = seq(min(0), max(40), by = 1)) +
-  labs(title = "Principle Component Analysis") +
-  geom_hline(yintercept = 39.8, linetype="dotted", color = "red") +
-  geom_hline(yintercept = 06.6, linetype="dotted", color = "red") +
-  ylab("Percentage of explained variance") + 
-  xlab("Principle Compoenent") +
-  guides(fill = "none") +
-  coord_flip()
 
 # Test cluster optimization with a silhouette plot
 # https://statsandr.com/blog/clustering-analysis-k-means-and-hierarchical-clustering-by-hand-and-in-r/#visualizations
-km4 <- kmeans(cluster_norm_vars, centers = 4, nstart = 55)
+km4 <- kmeans(cluster_norm_vars, centers = 3, nstart = 55)
 sil <- silhouette(km4$cluster, dist(cluster_norm_vars))
 fviz_silhouette(sil)
 
 # Plot the cluster on 2 dimensions (uses principle component analysis)
-fviz_cluster(km4, data = cluster_norm_vars, geom = "point", ellipse.type = c("norm"),
+fviz_cluster(km4, data = cluster_norm_vars, ellipse.type = c("norm"), geom = "point",
              palette = "Set1", ggtheme = theme_minimal())
 
 ?fviz_cluster
@@ -139,15 +143,46 @@ fviz_cluster(list(data = cluster_norm_vars, cluster = clust, geom = "point"), ge
 cluster_results <- as.data.frame(km4$cluster)
 hosp_clusters <- bind_cols(cluster_norm, cluster_results)
 
+View(cluster_norm)
+View(cluster_results)
+glimpse(hosp_clusters)
+glimpse(star_ratings)
+
+hosp_clusters <- hosp_clusters %>%
+  select(c("Facility.ID", "km4$cluster")) %>%
+  rename(cluster = `km4$cluster`) %>%
+  transform(Facility.ID = as.character(Facility.ID))
+glimpse(hosp_clusters)
+
+#compare clustering results of ground truth overall star ratings
+star_ratings <- read_csv("data/Hospital_General_Information.csv")
+star_ratings <- star_ratings %>%
+  filter(`Hospital Type` == "Acute Care Hospitals") %>%
+  select(c("Facility ID", "Hospital overall rating")) %>%
+  rename(Facility.ID = `Facility ID`) %>%
+  rename(Star.Rating = `Hospital overall rating`) %>%
+  transform(Star.Rating = as.numeric(Star.Rating))
+
+star_ratings$Facility.ID <- star_ratings$Facility.ID %>%
+  trimws("left", "0")
+glimpse(star_ratings)
+
+hosp_cluster_comparison <- full_join(hosp_clusters, star_ratings)
+glimpse(hosp_cluster_comparison)
+
+clust_analysis <- hosp_cluster_comparison %>%
+  group_by(cluster, Star.Rating) %>%
+  count()
 glimpse(clust_analysis)
-clust_analysis <- hosp_clusters %>%
-  group_by(`km4$cluster`) %>%
-  summarise_at(vars(Hospital.overall.rating), funs(mean(., na.rm=TRUE)))
- 
-  
+
 clust_analysis %>%
   ggplot() +
-  geom_bar(mapping = aes(x = ""))
+  geom_bar(mapping = aes(x = Star.Rating, y = n, fill = cluster), stat = "identity") +
+  facet_wrap(~ cluster)
 
-star_ratings <- read_csv("")
+#Use rand index to comparison compare clustering accuracy
+hosp_clust_comp <- hosp_cluster_comparison %>%
+  na.omit()
+glimpse(hosp_clust_comp)
 
+rand.index(hosp_clust_comp$Star.Rating,  hosp_clust_comp$cluster)
