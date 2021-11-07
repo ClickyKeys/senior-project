@@ -6,7 +6,7 @@ pacman::p_load(tidyverse, rlist, skimr, caret, VIM, sjPlot, factoextra, NbClust,
 
 ##### Remove missing values and normalize the dataframe #####
 #cluster <- read_csv("data/Measures_by_Hospital_Acute_Care_New.csv")
-cluster <- read_csv("data/Measures_by_Hospital_Acute_Care_V2.csv")
+cluster <- read_csv("data/Measures_by_Hospital_Acute_Care_New.csv")
 glimpse(cluster)
 
 #manually normalize data using the min-max method
@@ -18,14 +18,12 @@ for(i in 2:length(cluster)) {
   cluster[i] <- normalize(cluster[i])
 }
 
-#cluster_NAR <- as.data.frame(lapply(cluster[2:length(cluster)], normalize))
-cluster_NAR <- cluster
-glimpse(cluster_NAR)
+glimpse(cluster)
 
 #impute NA values using KNN method
-kVal = floor(sqrt(nrow(cluster_NAR)))
-cluster_NAR <- cluster_NAR %>%
-  kNN(variable = 2:length(cluster_NAR), k = kVal, imp_var = FALSE)
+kVal = floor(sqrt(nrow(cluster)))
+cluster_NAR <- cluster %>%
+  kNN(variable = 2:length(cluster), k = kVal, imp_var = FALSE)
 glimpse(cluster_NAR)
 
 write_csv(cluster_NAR, "data/cluster_normalized.csv")
@@ -38,13 +36,16 @@ glimpse(cluster_norm)
 #separate the Facility ID's from the variables for clustering
 rownames(cluster_norm_vars) <- cluster_norm$Facility.ID
 
+#(almost) all data
 cluster_norm_vars <- cluster_norm %>%
-  select(c(-"Total.Performance.Score", -"Overall.Rating.of.Hospital.Dimension.Score", -"HCAHPS.Base.Score", -"HCAHPS.Consistency.Score",
-           -"Facility.ID", -"Total.HAC.Score", -"H_HSP_RATING_STAR_RATING.x", -"H_STAR_RATING.x", -"Weighted.Normalized.Clinical.Outcomes.Domain.Score",
-           -"Unweighted.Person.and.Community.Engagement.Domain.Score", -"Weighted.Person.and.Community.Engagement.Domain.Score", -"Unweighted.Normalized.Efficiency.and.Cost.Reduction.Domain.Score",
-           -"Weighted.Efficiency.and.Cost.Reduction.Domain.Score")) 
-
+  select(c(-"Facility.ID"))
 glimpse(cluster_norm_vars)
+
+#with summary scores only
+#TO DO#
+
+#with raw scores only
+#TO DO#
 
 set.seed(123)
 
@@ -53,9 +54,6 @@ set.seed(123)
 cluster.pca <- prcomp(cluster_norm_vars, center = TRUE, scale. = TRUE)
 View(cluster.pca$x)
 fviz_eig(cluster.pca)
-
-cluster_nomr_vars <- as.data.frame(cluster.pca$x) %>%
-  select(c(PC1, PC2))
 
 #evaluate strongly correlated variables for dimensionality reduction
 fviz_pca_var(cluster.pca,
@@ -73,16 +71,6 @@ groups <- as.data.frame(cluster.var$coord) %>%
   arrange(Dim.1, Dim.2)
 
 glimpse(cluster_norm_vars)
-
-#reduce dimensionality by grouping based on similarity
-cluster_norm_vars$HCAHPS <- rowMeans(subset(cluster_norm_vars, select = c(16:24, 46:52)))
-cluster_norm_vars$SEP <- rowMeans(subset(cluster_norm_vars, select = c(28:31)))
-cluster_norm_vars$MORT <- rowMeans(subset(cluster_norm_vars, select = c(1:12, 40)))
-cluster_norm_vars$READM <- rowMeans(subset(cluster_norm_vars, select = c(13:15,32:33, 36:39)))
-cluster_norm_vars$OP <- rowMeans(subset(cluster_norm_vars, select = c(26:27, 34:35)))
-
-cluster_norm_vars <- cluster_norm_vars %>%
-  select(c(25, 41:45, 53:57))
 
 #kmeans method
 # methods to determine k:
@@ -111,7 +99,8 @@ nbclust_out <- NbClust(
 
 # Test cluster optimization with a silhouette plot
 # https://statsandr.com/blog/clustering-analysis-k-means-and-hierarchical-clustering-by-hand-and-in-r/#visualizations
-km4 <- kmeans(cluster_norm_vars, centers = 3, nstart = 55)
+glimpse(cluster_norm_vars)
+km4 <- kmeans(cluster_norm_vars, centers = 2, nstart = 55)
 sil <- silhouette(km4$cluster, dist(cluster_norm_vars))
 fviz_silhouette(sil)
 

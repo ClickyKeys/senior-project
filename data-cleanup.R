@@ -154,7 +154,7 @@ Transposed_Cols[[9]] <- Transposed_Cols[[9]] %>%
 glimpse(Transposed_Cols[[9]])
 
 Transposed_Cols[[10]] <- Transposed_Data[[10]] %>%
-  select(c(2, 10:16))
+  select(c(2, 10:17))
 
 Transposed_Cols[[10]] <- Transposed_Cols[[10]] %>%
   mutate_at(2:length(Transposed_Cols[[10]]), as.numeric)
@@ -214,7 +214,7 @@ NT_Cols[[3]] <- Not_Transposed[[3]] %>%
 glimpse(NT_Cols[[3]])
 
 NT_Cols[[4]] <- Not_Transposed[[4]] %>%
-  select(c(1, 9, 16))
+  select(c(1, 9, 12))
 glimpse(NT_Cols[[4]])
 
 NT_Cols[[5]] <- Not_Transposed[[5]] %>%
@@ -226,7 +226,7 @@ NT_Cols[[6]] <- Not_Transposed[[6]] %>%
 glimpse(NT_Cols[[6]])
 
 NT_Cols[[7]] <- Not_Transposed[[7]] %>%
-  select(c(1, 9, 16))
+  select(c(1, 9, 12))
 glimpse(NT_Cols[[7]])
 
 NT_Cols[[8]] <- Not_Transposed[[8]] %>%
@@ -285,12 +285,11 @@ glimpse(NT_Done[[3]])
 
 glimpse(NT_Cols[[4]])
 NT_Done[[4]] <- NT_Cols[[4]] %>%
-  transform(HCAHPS.Linear.Mean.Value = as.numeric(HCAHPS.Linear.Mean.Value)) %>%
-  pivot_wider(names_from = HCAHPS.Measure.ID, values_from = HCAHPS.Linear.Mean.Value)
+  transform(Patient.Survey.Star.Rating = as.numeric(Patient.Survey.Star.Rating)) %>%
+  pivot_wider(names_from = HCAHPS.Measure.ID, values_from = Patient.Survey.Star.Rating)
 
 NT_Done[[4]] <- NT_Done[[4]] %>%
-  select(c(1, 2, contains("LINEAR"))) %>%
-  select(c(-12))
+  select(c(1, contains("STAR")))
 glimpse(NT_Done[[4]])
 
 NT_Done[[5]] <- NT_Cols[[5]] %>%
@@ -310,12 +309,11 @@ glimpse(NT_Done[[6]])
 
 #######MAY ONLY NEED THE LAST STAR RATING COLUMN#######
 NT_Done[[7]] <- NT_Cols[[7]] %>%
-  transform(HCAHPS.Linear.Mean.Value = as.numeric(HCAHPS.Linear.Mean.Value)) %>%
-  pivot_wider(names_from = HCAHPS.Measure.ID, values_from = HCAHPS.Linear.Mean.Value)
+  transform(Patient.Survey.Star.Rating = as.numeric(Patient.Survey.Star.Rating)) %>%
+  pivot_wider(names_from = HCAHPS.Measure.ID, values_from = Patient.Survey.Star.Rating)
 
 NT_Done[[7]] <- NT_Done[[7]] %>%
-  select(c(1, 2, contains("LINEAR"))) %>%
-  select(c(-12))
+  select(c(1, contains("STAR")))
 glimpse(NT_Done[[7]])
 
 #######SMALL DATA TABLE MAY NEED TO OMIT#######
@@ -449,15 +447,15 @@ for(i in 1:length(joined_ACH)) {
 }
 print(measures)
 
-glimpse(joined_ACH[54])
+glimpse(joined_ACH)
 
 joined_ACH_final <- joined_ACH %>%
-select(c(1, 2, 3,   4,   5,   6,   7,   8,  11,  12,  16,  17,  18,  20,  22,  23,  24,  25,  26,  27,  30,  31,  35,  36,  37,  39,  40,  41,  42,  43,  44,  45,  46,  47,  54,  55,  77,  87,
-         88,  90,  93,  94,  95,  98, 101, 102, 104, 105, 127, 132, 133, 134, 135, 136, 139, 140, 142, 143, 144, 145, 146, 147, 148, 149, 156, 157, 158, 161, 162, 182,)) %>%
-  select(- c("PSI_03.y", "PSI_06.y", "PSI_08.y", "PSI_09.y", "PSI_10.y", "PSI_11.y", "PSI_12.y",  "PSI_15.y", "PSI_90.y", "Hospital.Type", "MSPB-1.y"))
+  select(c(1,2,3,4,5,6,7,8,11,12,16,17,18,20,22,23,24,25,26,27,30,31,35,36,37,38,39,40,41,42,43,44,45,46,47,48,55,56,79,89,90,92,95,96,97,100,
+          103,104,106,107,129,134,135,136,137,138,141,142,144,145,146,147,148,149,150,151,158,159,160,163,164,165,185)) %>%
+  select(- c("PSI_03.y", "PSI_06.y", "PSI_08.y", "PSI_09.y", "PSI_10.y", "PSI_11.y", "PSI_12.y", "PSI_15.y", "PSI_90.y", "Hospital.overall.rating", "Hospital.Type", "MSPB-1.y"))
 glimpse(joined_ACH_final)
 
-#13% total missing data from the finishe dataset
+#13% total missing data from the finished dataset
 (sum(is.na(joined_ACH_final))/prod(dim(joined_ACH_final)))*100
 
 #nearly all columns have <20% missing data 
@@ -465,5 +463,5 @@ for(i in 1:length(joined_ACH_final)) {
   print((sum(is.na(joined_ACH_final[i]))/prod(dim(joined_ACH_final[i])))*100)
 }
 
-write_csv(joined_ACH_final, "data/Measures_by_Hospital_Acute_Care_V2.csv")
+write_csv(joined_ACH_final, "data/Measures_by_Hospital_Acute_Care_New.csv")
 

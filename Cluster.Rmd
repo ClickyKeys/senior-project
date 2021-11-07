@@ -1,0 +1,161 @@
+---
+title: "Cluster"
+author: "Lori Nichols"
+date: "11/7/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r import, echo = FALSE}
+pacman::p_load(tidyverse, rlist, skimr, caret, VIM, sjPlot, factoextra, NbClust, cluster, rgl, fossil)
+```
+
+```{r read, echo = FALSE}
+cluster <- read_csv("data/Measures_by_Hospital_Acute_Care_New.csv")
+```
+
+### Normalize the data using the Min-Max method
+
+```{r normalize}
+normalize <- function(x) {
+  return ((x - min(x, na.rm = TRUE)) / (max(x, na.rm = TRUE) - min(x, na.rm = TRUE)))
+}
+
+for(i in 2:length(cluster)) {
+  cluster[i] <- normalize(cluster[i])
+}
+```
+
+### Impute missing values using kNN imputation
+
+```{r impute}
+kVal = floor(sqrt(nrow(cluster)))
+cluster_NAR <- cluster %>%
+  kNN(variable = 2:length(cluster), k = kVal, imp_var = FALSE)
+```
+
+```{r write, echo = FALSE}
+write_csv(cluster_NAR, "data/cluster_normalized.csv")
+```
+
+```{r readData, echo = FALSE}
+cluster_norm <- read_csv("data/cluster_normalized.csv")
+
+cluster_norm_vars <- cluster_norm %>%
+  select(c(-"Facility.ID"))
+glimpse(cluster_norm_vars)
+```
+
+### Identify which measures have the most variance using PCA
+
+```{r PCA}
+#principle component analysis to see which variables are responsible for most variance
+cluster.pca <- prcomp(cluster_norm_vars, center = TRUE, scale. = TRUE)
+fviz_eig(cluster.pca)
+
+#evaluate strongly correlated variables for dimensionality reduction
+fviz_pca_var(cluster.pca,
+             col.var = "contrib", # Color by contributions to the PC
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE
+)
+
+cluster.var <- get_pca_var(cluster.pca)
+glimpse(cluster.var)
+View(cluster.var$cor)
+
+groups <- as.data.frame(cluster.var$coord) %>%
+  transform(Measures = row.names(cluster.var$coord)) %>%
+  select(c(Measures, Dim.1, Dim.2)) %>%
+  arrange(Dim.1, Dim.2)
+```
+
+```{r k-meansAll_Clusters, fig.show = "hold", out.width = "50%"}
+set.seed(123)
+
+clustering <- function(x) {
+  km4 <- kmeans(cluster_norm_vars, centers = x, nstart = 55)
+  fviz_cluster(km4, data = cluster_norm_vars, ellipse.type = c("norm"), geom = "point", palette = "Set1", ggtheme = theme_minimal())
+}
+
+for( i in 2:4) {
+  clustering(i)
+}
+```
+
+```{r k-meansAll_RandIndex}
+set.seed(123)
+
+clustering <- function(x) {
+  km4 <- kmeans(cluster_norm_vars, centers = x, nstart = 55)
+  fviz_cluster(km4, data = cluster_norm_vars, ellipse.type = c("norm"), geom = "point", palette = "Set1", ggtheme = theme_minimal())
+}
+  
+RI <- function(x) {
+  #Add cluster results to original data frame
+  cluster_results <- as.data.frame(km4$cluster)
+  hosp_clusters <- bind_cols(cluster_norm, cluster_results)
+  
+  #glimpse(cluster_results)
+  #glimpse(hosp_clusters)
+    
+  hosp_clusters <- hosp_clusters %>%
+    select(c("Facility.ID", "km4$cluster")) %>%
+    rename(cluster = `km4$cluster`) %>%
+    transform(Facility.ID = as.character(Facility.ID))
+  #glimpse(hosp_clusters)
+    
+  #compare clustering results of ground truth overall star ratings
+  star_ratings <- read_csv("data/Hospital_General_Information.csv")
+  star_ratings <- star_ratings %>%
+    filter(`Hospital Type` == "Acute Care Hospitals") %>%
+    select(c("Facility ID", "Hospital overall rating")) %>%
+    rename(Facility.ID = `Facility ID`) %>%
+    rename(Star.Rating = `Hospital overall rating`) %>%
+    transform(Star.Rating = as.numeric(Star.Rating))
+    
+  star_ratings$Facility.ID <- star_ratings$Facility.ID %>%
+    trimws("left", "0")
+  #glimpse(star_ratings)
+    
+  hosp_cluster_comparison <- full_join(hosp_clusters, star_ratings)
+  #glimpse(hosp_cluster_comparison)
+    
+  clust_analysis <- hosp_cluster_comparison %>%
+    group_by(cluster, Star.Rating) %>%
+    count()
+  #glimpse(clust_analysis)
+    
+  clust_analysis %>%
+    ggplot() +
+    geom_bar(mapping = aes(x = Star.Rating, y = n, fill = cluster), stat = "identity") +
+    facet_wrap(~ cluster)
+    
+  #Use rand index to comparison compare clustering accuracy
+  hosp_clust_comp <- hosp_cluster_comparison %>%
+    na.omit()
+  #glimpse(hosp_clust_comp)
+    
+  rand.index(hosp_clust_comp$Star.Rating,  hosp_clust_comp$cluster)
+}
+
+kVal <- NULL
+randIndex <- NULL
+
+for(i in 2:8) {
+  kVal <- list.append(kVal, i)
+  randIndex <- list.append(randIndex, RI(i))
+}
+
+randIndexResults <- tibble(kVal = as.character(kVal), randIndex)
+
+randIndexResults %>%
+  ggplot() +
+  geom_bar(mapping = aes(x = kVal, y = randIndex, fill = kVal), stat = "identity", position = "dodge")
+
+#Low randIndex, these clusters may be useful but not an indicator of quality as defined by CMS's star ratings
+#CMS uses different methodology go determine their final star ratings
+```
