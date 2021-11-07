@@ -5,7 +5,7 @@ date: "11/7/2021"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -14,87 +14,62 @@ pacman::p_load(tidyverse, rlist, skimr, caret, VIM, sjPlot, factoextra, NbClust,
 ```
 
 ```{r read, echo = FALSE}
-cluster <- read_csv("data/Measures_by_Hospital_Acute_Care_New.csv")
+# cluster <- read_csv("data/Measures_by_Hospital_Acute_Care_New.csv")
 ```
 
 ### Normalize the data using the Min-Max method
 
 ```{r normalize}
-normalize <- function(x) {
-  return ((x - min(x, na.rm = TRUE)) / (max(x, na.rm = TRUE) - min(x, na.rm = TRUE)))
-}
-
-for(i in 2:length(cluster)) {
-  cluster[i] <- normalize(cluster[i])
-}
+# normalize <- function(x) {
+#   return ((x - min(x, na.rm = TRUE)) / (max(x, na.rm = TRUE) - min(x, na.rm = TRUE)))
+# }
+# 
+# for(i in 2:length(cluster)) {
+#   cluster[i] <- normalize(cluster[i])
+# }
 ```
 
 ### Impute missing values using kNN imputation
 
 ```{r impute}
-kVal = floor(sqrt(nrow(cluster)))
-cluster_NAR <- cluster %>%
-  kNN(variable = 2:length(cluster), k = kVal, imp_var = FALSE)
+# kVal = floor(sqrt(nrow(cluster)))
+# cluster_NAR <- cluster %>%
+#   kNN(variable = 2:length(cluster), k = kVal, imp_var = FALSE)
 ```
 
 ```{r write, echo = FALSE}
-write_csv(cluster_NAR, "data/cluster_normalized.csv")
+# write_csv(cluster_NAR, "data/cluster_normalized.csv")
 ```
 
-```{r readData, echo = FALSE}
+```{r seed}
+set.seed(123)
+```
+
+```{r readData_All, echo = FALSE, message = FALSE, warning = FALSE}
 cluster_norm <- read_csv("data/cluster_normalized.csv")
 
 cluster_norm_vars <- cluster_norm %>%
   select(c(-"Facility.ID"))
-glimpse(cluster_norm_vars)
 ```
 
-### Identify which measures have the most variance using PCA
-
-```{r PCA}
-#principle component analysis to see which variables are responsible for most variance
-cluster.pca <- prcomp(cluster_norm_vars, center = TRUE, scale. = TRUE)
-fviz_eig(cluster.pca)
-
-#evaluate strongly correlated variables for dimensionality reduction
-fviz_pca_var(cluster.pca,
-             col.var = "contrib", # Color by contributions to the PC
-             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-             repel = TRUE
-)
-
-cluster.var <- get_pca_var(cluster.pca)
-glimpse(cluster.var)
-View(cluster.var$cor)
-
-groups <- as.data.frame(cluster.var$coord) %>%
-  transform(Measures = row.names(cluster.var$coord)) %>%
-  select(c(Measures, Dim.1, Dim.2)) %>%
-  arrange(Dim.1, Dim.2)
+```{r readData_All_Raw, echo = FALSE, message = FALSE, warning = FALSE}
+cluster_norm_vars_raw <- cluster_norm %>%
+  select(c(-"Facility.ID", -"Total.Performance.Score", -"Weighted.Efficiency.and.Cost.Reduction.Domain.Score", -"Unweighted.Normalized.Efficiency.and.Cost.Reduction.Domain.Score", -"Weighted.Person.and.Community.Engagement.Domain.Score", -"Unweighted.Person.and.Community.Engagement.Domain.Score", -"Weighted.Normalized.Clinical.Outcomes.Domain.Score", -"HCAHPS.Consistency.Score", -"HCAHPS.Base.Score", -"Overall.Rating.of.Hospital.Dimension.Score", -"Discharge.Information.Dimension.Score", -"Cleanliness.and.Quietness.of.Hospital.Environment.Dimension.Score", -"Communication.About.Medicines.Dimension.Score", -"Care.Transition.Dimension.Score", -"Responsiveness.of.Hospital.Staff.Dimension.Score", -"Communication.with.Doctors.Dimension.Score", -"Communication.with.Nurses.Dimension.Score", -"H_STAR_RATING.x"))
 ```
 
-```{r k-meansAll_Clusters, fig.show = "hold", out.width = "50%"}
-set.seed(123)
-
-clustering <- function(x) {
-  km4 <- kmeans(cluster_norm_vars, centers = x, nstart = 55)
-  fviz_cluster(km4, data = cluster_norm_vars, ellipse.type = c("norm"), geom = "point", palette = "Set1", ggtheme = theme_minimal())
-}
-
-for( i in 2:4) {
-  clustering(i)
-}
+```{r readData_All_Summary, echo = FALSE, message = FALSE, warning = FALSE}
+cluster_norm_vars_summary <- cluster_norm %>%
+  select(c(-"Facility.ID")) %>%
+  select(c("Total.Performance.Score", "Weighted.Efficiency.and.Cost.Reduction.Domain.Score", "Unweighted.Normalized.Efficiency.and.Cost.Reduction.Domain.Score", "Weighted.Person.and.Community.Engagement.Domain.Score", "Unweighted.Person.and.Community.Engagement.Domain.Score", "Weighted.Normalized.Clinical.Outcomes.Domain.Score", "HCAHPS.Consistency.Score", "HCAHPS.Base.Score", "Overall.Rating.of.Hospital.Dimension.Score", "Discharge.Information.Dimension.Score", "Cleanliness.and.Quietness.of.Hospital.Environment.Dimension.Score", "Communication.About.Medicines.Dimension.Score", "Care.Transition.Dimension.Score", "Responsiveness.of.Hospital.Staff.Dimension.Score", "Communication.with.Doctors.Dimension.Score", "Communication.with.Nurses.Dimension.Score", "H_STAR_RATING.x"))
 ```
 
-```{r k-meansAll_RandIndex}
-set.seed(123)
+### Calculate the Rand Index for various values of 'k'
 
-clustering <- function(x) {
-  km4 <- kmeans(cluster_norm_vars, centers = x, nstart = 55)
-  fviz_cluster(km4, data = cluster_norm_vars, ellipse.type = c("norm"), geom = "point", palette = "Set1", ggtheme = theme_minimal())
-}
+```{r RandIndex_function, echo = FALSE, message = FALSE, warning = FALSE}
+RI <- function(x, y) {
+  km4 <- kmeans(y, centers = x, nstart = 55)
+  fviz_cluster(km4, data = y, ellipse.type = c("norm"), geom = "point", palette = "Set1", ggtheme = theme_minimal())
   
-RI <- function(x) {
   #Add cluster results to original data frame
   cluster_results <- as.data.frame(km4$cluster)
   hosp_clusters <- bind_cols(cluster_norm, cluster_results)
@@ -141,13 +116,17 @@ RI <- function(x) {
     
   rand.index(hosp_clust_comp$Star.Rating,  hosp_clust_comp$cluster)
 }
+```
 
+### Rand Index for all quality measure scores in the data table
+
+```{r k-meansAll_RandIndex1}
 kVal <- NULL
 randIndex <- NULL
 
 for(i in 2:8) {
   kVal <- list.append(kVal, i)
-  randIndex <- list.append(randIndex, RI(i))
+  randIndex <- list.append(randIndex, RI(i, cluster_norm_vars))
 }
 
 randIndexResults <- tibble(kVal = as.character(kVal), randIndex)
@@ -158,4 +137,95 @@ randIndexResults %>%
 
 #Low randIndex, these clusters may be useful but not an indicator of quality as defined by CMS's star ratings
 #CMS uses different methodology go determine their final star ratings
+```
+
+### Rand Index for all quality measure scores minus summary scores
+
+```{r k-meansAll_RandIndex2}
+kVal <- NULL
+randIndex <- NULL
+
+for(i in 2:8) {
+  kVal <- list.append(kVal, i)
+  randIndex <- list.append(randIndex, RI(i, cluster_norm_vars_raw))
+}
+
+randIndexResults <- tibble(kVal = as.character(kVal), randIndex)
+
+randIndexResults %>%
+  ggplot() +
+  geom_bar(mapping = aes(x = kVal, y = randIndex, fill = kVal), stat = "identity", position = "dodge")
+
+#Low randIndex, these clusters may be useful but not an indicator of quality as defined by CMS's star ratings
+#CMS uses different methodology go determine their final star ratings
+```
+
+### Rand Index for quality measure summary scores only
+
+```{r k-meansAll_RandIndex3}
+kVal <- NULL
+randIndex <- NULL
+
+for(i in 2:8) {
+  kVal <- list.append(kVal, i)
+  randIndex <- list.append(randIndex, RI(i, cluster_norm_vars_summary))
+}
+
+randIndexResults <- tibble(kVal = as.character(kVal), randIndex)
+
+randIndexResults %>%
+  ggplot() +
+  geom_bar(mapping = aes(x = kVal, y = randIndex, fill = kVal), stat = "identity", position = "dodge")
+
+#Low randIndex, these clusters may be useful but not an indicator of quality as defined by CMS's star ratings
+#CMS uses different methodology go determine their final star ratings
+```
+
+### Clustering plot using k = 2, 4, 8
+
+```{r k-meansAll_Clusters, fig.show = "hold", out.width = "50%", echo = TRUE, message = FALSE, warning = FALSE}
+clustering <- function(x, y) {
+  km4 <- kmeans(y, centers = x, nstart = 55)
+  fviz_cluster(km4, data = y, ellipse.type = c("norm"), geom = "point", palette = "Set1", ggtheme = theme_minimal())
+}
+
+clustering(2, cluster_norm_vars)
+clustering(4, cluster_norm_vars)
+clustering(8, cluster_norm_vars)
+
+#For quality measure scores minus summary scores
+
+clustering(2, cluster_norm_vars_raw)
+clustering(4, cluster_norm_vars_raw)
+clustering(8, cluster_norm_vars_raw)
+
+#For summary quality measure scores only
+clustering(2, cluster_norm_vars_summary)
+clustering(4, cluster_norm_vars_summary)
+clustering(8, cluster_norm_vars_summary)
+```
+
+### Identify which measures have the most variance using PCA
+
+```{r PCA, message = FALSE, warning = FALSE}
+#principle component analysis to see which variables are responsible for most variance
+cluster.pca <- prcomp(cluster_norm_vars, center = TRUE, scale. = TRUE)
+
+fviz_eig(cluster.pca)
+```
+
+```{r PCA_Extra, echo = FALSE, message = FALSE, warning = FALSE}
+#evaluate strongly correlated variables for dimensionality reduction
+fviz_pca_var(cluster.pca,
+             col.var = "contrib", # Color by contributions to the PC
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE
+)
+
+cluster.var <- get_pca_var(cluster.pca)
+
+groups <- as.data.frame(cluster.var$coord) %>%
+  transform(Measures = row.names(cluster.var$coord)) %>%
+  select(c(Measures, Dim.1, Dim.2)) %>%
+  arrange(Dim.1, Dim.2)
 ```
