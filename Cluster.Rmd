@@ -66,7 +66,7 @@ cluster_norm_vars_summary <- cluster_norm %>%
 ### Calculate the Rand Index for various values of 'k'
 
 ```{r RandIndex_function, echo = FALSE, message = FALSE, warning = FALSE}
-RI <- function(x, y) {
+RI <- function(x, y, z) {
   km4 <- kmeans(y, centers = x, nstart = 55)
   fviz_cluster(km4, data = y, ellipse.type = c("norm"), geom = "point", palette = "Set1", ggtheme = theme_minimal())
   
@@ -85,6 +85,7 @@ RI <- function(x, y) {
     
   #compare clustering results of ground truth overall star ratings
   star_ratings <- read_csv("data/Hospital_General_Information.csv")
+  
   star_ratings <- star_ratings %>%
     filter(`Hospital Type` == "Acute Care Hospitals") %>%
     select(c("Facility ID", "Hospital overall rating")) %>%
@@ -194,7 +195,6 @@ clustering(4, cluster_norm_vars)
 clustering(8, cluster_norm_vars)
 
 #For quality measure scores minus summary scores
-
 clustering(2, cluster_norm_vars_raw)
 clustering(4, cluster_norm_vars_raw)
 clustering(8, cluster_norm_vars_raw)
@@ -203,13 +203,15 @@ clustering(8, cluster_norm_vars_raw)
 clustering(2, cluster_norm_vars_summary)
 clustering(4, cluster_norm_vars_summary)
 clustering(8, cluster_norm_vars_summary)
+
+#there appear to be many correlated variables here - May need to apply dimensionality reduction or use a different clustering method to evaluate
 ```
 
 ### Identify which measures have the most variance using PCA
 
 ```{r PCA, message = FALSE, warning = FALSE}
 #principle component analysis to see which variables are responsible for most variance
-cluster.pca <- prcomp(cluster_norm_vars, center = TRUE, scale. = TRUE)
+cluster.pca <- prcomp(cluster_norm_vars_summary, center = TRUE, scale. = TRUE)
 
 fviz_eig(cluster.pca)
 ```

@@ -1,11 +1,10 @@
 #install.packages("VIM")
 #install.packages("sjPlot")
-install.packages("fossil")
+#install.packages("fossil")
 
 pacman::p_load(tidyverse, rlist, skimr, caret, VIM, sjPlot, factoextra, NbClust, cluster, rgl, fossil)
 
 ##### Remove missing values and normalize the dataframe #####
-#cluster <- read_csv("data/Measures_by_Hospital_Acute_Care_New.csv")
 cluster <- read_csv("data/Measures_by_Hospital_Acute_Care_New.csv")
 glimpse(cluster)
 
@@ -18,15 +17,14 @@ for(i in 2:length(cluster)) {
   cluster[i] <- normalize(cluster[i])
 }
 
-glimpse(cluster)
-
 #impute NA values using KNN method
-kVal = floor(sqrt(nrow(cluster)))
-cluster_NAR <- cluster %>%
-  kNN(variable = 2:length(cluster), k = kVal, imp_var = FALSE)
+kVal = floor(sqrt(nrow(cluster_norm)))
+
+cluster_NAR <- cluster_norm %>%
+  kNN(variable = 2:length(cluster_norm), k = kVal, imp_var = FALSE)
 glimpse(cluster_NAR)
 
-write_csv(cluster_NAR, "data/cluster_normalized.csv")
+write_csv(cluster_NAR, "data/cluster_normalized_z-score.csv")
 
 ##### implement clustering #####
 
@@ -52,7 +50,6 @@ set.seed(123)
 # k-means clustering method - normalized
 #principle component analysis to see which variables are responsible for most variance
 cluster.pca <- prcomp(cluster_norm_vars, center = TRUE, scale. = TRUE)
-View(cluster.pca$x)
 fviz_eig(cluster.pca)
 
 #evaluate strongly correlated variables for dimensionality reduction
@@ -70,61 +67,53 @@ groups <- as.data.frame(cluster.var$coord) %>%
   select(c(Measures, Dim.1, Dim.2)) %>%
   arrange(Dim.1, Dim.2)
 
-glimpse(cluster_norm_vars)
+groups %>%
+  ggplot() +
+  geom_point(mapping = aes(x = Dim.1, y = Dim.2))
+View(groups)
 
-#kmeans method
+# kmeans clustering method
 # methods to determine k:
 # Elbow method 
-fviz_nbclust(cluster_norm_vars, kmeans, method = "wss") +
-  labs(subtitle = "Elbow method") # add subtitle
+cluster_norm_vars %>%
+  fviz_nbclust(FUN = kmeans, method = "wss")
 
-#gap stat
-MyKmeansFUN <- function(x,k) list(cluster=kmeans(x, k, iter.max=100))
-
-fviz_nbclust(cluster_norm_vars, FUNcluster=MyKmeansFUN, method="gap_stat") +
-  labs(subtitle = "Gap statistic method")
-
-# Silhouette method
-fviz_nbclust(cluster_norm_vars, kmeans, method = "silhouette") +
-  labs(subtitle = "Silhouette method")
-
-#test number of clusters for kmeans
-nbclust_out <- NbClust(
-  data = cluster_norm_vars,
-  distance = "euclidean",
-  min.nc = 2, # minimum number of clusters
-  max.nc = 6, # maximum number of clusters
-  method = "kmeans" # one of: "ward.D", "ward.D2", "single", "complete", "average", "mcquitty", "median", "centroid", "kmeans"
-)
+#silhouette method
+cluster_norm_vars %>%
+  fviz_nbclust(FUN = kmeans, method = "silhouette")
 
 # Test cluster optimization with a silhouette plot
 # https://statsandr.com/blog/clustering-analysis-k-means-and-hierarchical-clustering-by-hand-and-in-r/#visualizations
-glimpse(cluster_norm_vars)
-km4 <- kmeans(cluster_norm_vars, centers = 2, nstart = 55)
-sil <- silhouette(km4$cluster, dist(cluster_norm_vars))
-fviz_silhouette(sil)
+km4 <- kmeans(cluster_norm_vars, centers = 4, nstart = 55)
 
 # Plot the cluster on 2 dimensions (uses principle component analysis)
-fviz_cluster(km4, data = cluster_norm_vars, ellipse.type = c("norm"), geom = "point",
+fviz_cluster(km4, data = cluster_norm_vars, geom = "point",
              palette = "Set1", ggtheme = theme_minimal())
 
-?fviz_cluster
-# Heirarchical method
 
-#find distance matrix and perform euclidean clustering
-dist_matrix <- dist(cluster_norm_vars, method = "euclidean")
-hc_euclidean <- hclust(dist_matrix, method = "complete")
-plot(hc_euclidean)
+#Hierarchical Method
+#elbow method and silhouette method
 
-#agnes function complete 
-#https://www.r-bloggers.com/2017/12/how-to-perform-hierarchical-clustering-using-r/n to get the agglomerative coefficient
-hc_agnes <- agnes(cluster_norm_vars, method = "complete")
-hc_agnes$ac
-plot(hc_agnes)
+cluster_norm_vars %>%
+  fviz_nbclust(FUN = hcut, method = "wss")
 
-# Cutting tree by no. of clusters
-clust <- cutree(hc_agnes, k = 4 )
-rect.hclust(hc_agnes, k = 4, border = 2:10)
+#suggests 10
+cluster_norm_vars %>%
+  fviz_nbclust(FUN = hcut, method = "silhouette")
+
+hc <- cluster_norm_vars %>%
+  dist %>%
+  hclust
+
+hc %>%
+  plot(
+    hang = -1,
+    cex = 0.6
+  )
+
+#cut the dendrogrm
+hc %>%
+  rect.hclust(k = 3, border = 2:5)
 
 fviz_cluster(list(data = cluster_norm_vars, cluster = clust, geom = "point"), geom = "point", repel = TRUE, ellipse.type = "norm")
 
