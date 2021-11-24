@@ -115,7 +115,7 @@ RI <- function(x, y, z) {
     na.omit()
   #glimpse(hosp_clust_comp)
     
-  rand.index(hosp_clust_comp$Star.Rating,  hosp_clust_comp$cluster)
+  adj.rand.index(hosp_clust_comp$Star.Rating,  hosp_clust_comp$cluster)
 }
 ```
 
