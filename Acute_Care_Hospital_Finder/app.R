@@ -7,7 +7,10 @@
 #    http://shiny.rstudio.com/
 #
 
-pacman::p_load(shiny, tidyverse, htmltools, leaflet)
+library(shiny)
+library(tidyverse)
+library(htmltools)
+library(leaflet)
 
 locations <- read_csv("data/locations.csv")
 
@@ -20,14 +23,13 @@ ui <- fluidPage(
     sidebarLayout(
         sidebarPanel(
             selectInput("state", label = "Select State:",
-                        choices = locations$State,
-                        selected = locations$State[1]),
+                        choices = locations$State),
             selectInput("county", label = "Select County:",
                         choices = NULL)
         ),
 
         mainPanel(
-           leafletOutput("MapPlot")
+           leafletOutput("MapPlot", height = "75vh")
         )
     )
 )
@@ -54,7 +56,8 @@ server <- function(input, output, session) {
     
     temp_df <- locations %>%
       filter(State == input$state) %>%
-      filter(County == input$county) 
+      filter(County == input$county)  %>%
+      head(1)
     
     MapPlot$name <- temp_df %>%
       select(c("Facility Name"))
