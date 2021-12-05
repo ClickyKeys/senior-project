@@ -1,8 +1,7 @@
 ---
-title: "Analysis of Acute Care Hospital Quality"
+title: "Analysis of Acute Care Hospital Quality in the United States"
 author: "Lori Nichols"
 output:
-  pdf_document: default
   html_document: default
 ---
 
@@ -22,30 +21,65 @@ h4.author {
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r import, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+```{r importPackages, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+# Uncomment and run to intall the following packages if running this code for the first time
+# install.packages("tidyverse", "rlist", "skimr", "caret", "MASS", "cvms", "kableExtra", "VIM", "sjPlot", "factoextra", "NbClust", "cluster", "rgl", "fossil")
+
+# Load the necessary packages
 pacman::p_load(tidyverse, rlist, skimr, caret, MASS, cvms, kableExtra, VIM, sjPlot, factoextra, NbClust, cluster, rgl, fossil)
 ```
 
-```{r readInitial, echo = FALSE}
-#cluster <- read_csv("data/Measures_by_Hospital_Acute_Care_New.csv")
+```{r readInitial, echo = FALSE, message = FALSE, warning = FALSE, error = FALSE}
+# Read in the dataframe created using the 'data-cleanup.R' source code
+# IMPORTANT: Uncomment and run if 'data-cleanup.R' was updated and run with new data
+# cluster <- read_csv("data/Measures_by_Hospital_Acute_Care_Final.csv")
 ```
+
+\
+
+![](data/CMS-logo.jpg)
+
+# Introduction
+
+Quality of services provided at acute care hospitals around the United States is critical for improving individual health among patients admitted to hospitals for acute needs.  Measuring and monitoring this quality is an essential function carried out by the Centers for Medicare and Medicare Services (CMS) within the US department of health and human services.  CMS makes this quality assessment data publicly available online on an annual basis.  The goal of making the data publicly available is to help patients choose better hospitals for their health needs and to help data scientists identify target areas for quality improvement.  Studying patterns and variations in quality of services at acute care hospitals can help identify key insights for improving the healthcare system in the US.  Therefore, the goal of this project is to leverage CMS hospital quality data to:
+
+* Identify groups of hospitals based on quality performance metrics; 
+* Predict hospital quality using a variety of hospital characteristics;
+* Create an interactive application to help patients identify the best hospital and understand quality of acute care areas in their county of residence.
+
+\
+
+# Data Source
+
+The data obtained from CMS provide comprehensive information on quality of services provided at each hospital, as measured by several quality measures.  These quality measures assess four different domains of hospital quality, namely:
+
+* Safety
+* Person and Community Engagement
+* Clinical Outcomes
+* Efficiency and Cost Reduction
+
+Over 80 quality measures are aggregated by CMS into appropriate domain scores and then used to assign a star rating to each acute care hospital on a scale of 1 through 5. For example, the quality measure, 'percentage of patients dying within 30 days after a heart attack' would fall under the Clinical Outcomes domain, whereas the quality measure 'percentage of patients reporting satisfaction with their care' would fall under the Person and Community Engagement domain. Because of the variation in the definitions and estimations of each quality measure and certain requirements, each hospital may only be eligible to report some of these measures.  For the purpose of this project, quality measure data from 29 different CMS data sets were collected and examined for inclusion in the following analyses.  Measures that were found to have > 25% missing data for all observations were eliminated from this analysis in order to limit the analysis to measures captured by most acute care hospitals in the US. After eliminating measures with too much missing data, a total of 64 measures were identified in 3,247 acute care hospitals distributed across the US and used for the following analysis.
+
 
 \
 
 # Part 1 - Exploratory Clustering Analysis of Hospital Quality Measures
 
-The aim of this analysis is to explore how the Center for Medicare and Medicaid Services (CMS) uses quality measure data to determine overall hospital quality. To achieve this, a popular statistical technique will be used, K-means clustering.  K-means partitions observations into a pre-defined number of groups (or clusters) based on similarities between variables.  Using this method, we can identify natural groupings in hospitals based on a variety of quality measures.  The resulting clusters can then be compared to CMS's overall star ratings to determine if they are useful for determining hospital quality as indicated by CMS's star rating system. 
+The aim of this analysis is to explore how the Centers for Medicare and Medicaid Services (CMS) uses quality measure data to determine overall hospital quality. To achieve this, K-means clustering will be used.  K-means clustering partitions observations into a pre-defined number of groups (or clusters) based on similarities between variables.  Using this method, we can identify natural groupings in hospitals based on a variety of quality measures.  The resulting clusters can then be compared to CMS's overall star ratings to determine if they are useful for determining hospital quality as indicated by CMS's star rating system. 
 
+\
 
+## Data Preparation Process
 
-## Normalize the data
+### Data Normalization
 
 The dataset being used for this analysis contains numerous variables, which are measured and scaled differently.  The clustering method being used uses k-means, which is a distance-based algorithm.  It is important to bring all variables to the same scale, otherwise variables measured in large valued units will dominate the computed dissimilarity and vars measured in small valued units will contribute very little. 
 
-The normalization method being used is min-max normalization (or min-max scaling), which normalizes the values on a scale of 0 - 1, where 0 is the min value and 1 is the max,
-all other data points fall between those two values./
+The normalization method being used is min-max normalization (or min-max scaling), which normalizes the values on a scale of 0 - 1, where 0 is the min value and 1 is the max, and all other data points fall between those two values./
 
-```{r normalize, echo = TRUE, warning = FALSE, error = FALSE, message = FALSE}
+```{r normalizeData, echo = TRUE, warning = FALSE, error = FALSE, message = FALSE}
+# Normalize the data stored in the 'cluster' data frame
+# IMPORTANT: uncomment and run if new data was read in from code block 'readInitial'
 # normalize <- function(x) {
 #   return ((x - min(x, na.rm = TRUE)) / (max(x, na.rm = TRUE) - min(x, na.rm = TRUE)))
 # }
@@ -56,86 +90,107 @@ all other data points fall between those two values./
 ```
 
 
+### K Nearest Neighbors Missing Value Imputation
 
-## Impute missing values using kNN imputation
+The aggregated dataset containing quality measures being used for this analysis has missing values, which need to be removed or imputed prior to running the k-means algorithm.  The imputation method used is imputation with kNN, which looks at values that are close in space and imputes the mean value of the k nearest neighbors, where k is the sqare root of the total number of observations.
 
-The dataset being used for this analysis has missing values, which need to be removed or imputed prior to running the k-means algorithm.  The imputation method used is imputation with kNN, which looks at values that are close in space and imputes the mean value of the k nearest neighbors, where k is the sqrt of the total number of observations.
-
-```{r impute, echo = TRUE, warning = FALSE, error = FALSE, message = FALSE}
+```{r imputeMissing, echo = TRUE, warning = FALSE, error = FALSE, message = FALSE}
+# Impute missing values in the 'cluster' dataframe
+# IMPORTANT: uncomment and run if new data was read in from code block 'readInitial' and normalized in code block 'normalizeData'
 # kVal = floor(sqrt(nrow(cluster)))
 # cluster_NAR <- cluster %>%
 #   kNN(variable = 2:length(cluster), k = kVal, imp_var = FALSE)
 ```
 
 ```{r write, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE}
-# write_csv(cluster_NAR, "data/cluster_normalized.csv")
+# Write the normalize and imputed dataframe to the 'data' folder so the 'readInitial', 'normalizeData', and 'imputeMissing' code blocks don't need to be run again for current data
+# IMPORTANT: uncomment and run if new data was read in, normalize, and imputed in the above code blocks
+# write_csv(cluster_NAR, "data/cluster_normalized_Final.csv")
 ```
 
 ```{r seed, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+# Set seed so the results are reproducible
 set.seed(123)
 ```
 
+\
 
+## K Means Clustering Analysis
 
-## Selecting variables for k-means clustering
+Of the 64 variables being used for this analysis, 48 were individual quality measure scores and 16 were summary scores estimated by CMS.  In order to best leverage these two types of variables, the clustering was repeated 3 different times and the results were compared.  This iterative approach to clustering can also be beneficial, because k-means clustering is an unsupervised, exploratory data analysis technique. The variables used for each of the 3 iterations of the clustering algorithm are provided below. 
 
-Observing the dataset, there are 64 quality measure score variables.  The measure scores appear to fall into two categories: Preliminary scores which account for a single measure (ie. Readmission for COPD), and summary scores, which summarize multiple, preliminary variables (ie. summary of all Readmission measures).  The data has been separated into 3 data frames, which will be explored separate with k-means clustering and the results compared:
+* Quality measure scores only (48 variables)
+* Summary scores only (16 variables)
+* Both quality measure scores and summary scores (64 variables)
 
-* All measure scores (preliminary + summary)
-* Preliminary scores only
-* Summary scores only
 
 ```{r readData_All, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE}
-cluster_norm <- read_csv("data/cluster_normalized.csv")
+# Read in the current dataframe containing normalized and imputed variables
+cluster_norm <- read_csv("data/cluster_normalized_Final.csv")
 
+# Remove facility ID from the dataframe
 cluster_norm_vars <- cluster_norm %>%
   dplyr::select(c(-"Facility.ID"))
 ```
 
-```{r readData_All_Raw, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+```{r readData_MeasureScores, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+# Select all of the measure scores only
 cluster_norm_vars_raw <- cluster_norm %>%
-  dplyr::select(c(-"Facility.ID", -"Total.Performance.Score", -"Weighted.Efficiency.and.Cost.Reduction.Domain.Score", -"Unweighted.Normalized.Efficiency.and.Cost.Reduction.Domain.Score", -"Weighted.Person.and.Community.Engagement.Domain.Score", -"Unweighted.Person.and.Community.Engagement.Domain.Score", -"Weighted.Normalized.Clinical.Outcomes.Domain.Score", -"HCAHPS.Consistency.Score", -"HCAHPS.Base.Score", -"Overall.Rating.of.Hospital.Dimension.Score", -"Discharge.Information.Dimension.Score", -"Cleanliness.and.Quietness.of.Hospital.Environment.Dimension.Score", -"Communication.About.Medicines.Dimension.Score", -"Care.Transition.Dimension.Score", -"Responsiveness.of.Hospital.Staff.Dimension.Score", -"Communication.with.Doctors.Dimension.Score", -"Communication.with.Nurses.Dimension.Score", -"H_STAR_RATING.x"))
+  dplyr::select(c(-"Facility.ID", -"Total.Performance.Score", -"Weighted.Efficiency.and.Cost.Reduction.Domain.Score",
+                  -"Overall.Rating.of.Hospital.Dimension.Score", -"Unweighted.Normalized.Efficiency.and.Cost.Reduction.Domain.Score",
+                  -"Weighted.Person.and.Community.Engagement.Domain.Score", -"Unweighted.Person.and.Community.Engagement.Domain.Score",
+                  -"Weighted.Normalized.Clinical.Outcomes.Domain.Score", -"HCAHPS.Consistency.Score", -"HCAHPS.Base.Score", -"Discharge.Information.Dimension.Score",
+                  -"Cleanliness.and.Quietness.of.Hospital.Environment.Dimension.Score", -"Communication.About.Medicines.Dimension.Score", -"Care.Transition.Dimension.Score",
+                  -"Responsiveness.of.Hospital.Staff.Dimension.Score", -"Communication.with.Doctors.Dimension.Score", -"Communication.with.Nurses.Dimension.Score",
+                  -"H_STAR_RATING.x"))
 ```
 
-```{r readData_All_Summary, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+```{r readData_SummaryScores, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+# Select all of the summary scores only
 cluster_norm_vars_summary <- cluster_norm %>%
   dplyr::select(c(-"Facility.ID")) %>%
-  dplyr::select(c("Total.Performance.Score", "Weighted.Efficiency.and.Cost.Reduction.Domain.Score", "Unweighted.Normalized.Efficiency.and.Cost.Reduction.Domain.Score", "Weighted.Person.and.Community.Engagement.Domain.Score", "Unweighted.Person.and.Community.Engagement.Domain.Score", "Weighted.Normalized.Clinical.Outcomes.Domain.Score", "HCAHPS.Consistency.Score", "HCAHPS.Base.Score", "Overall.Rating.of.Hospital.Dimension.Score", "Discharge.Information.Dimension.Score", "Cleanliness.and.Quietness.of.Hospital.Environment.Dimension.Score", "Communication.About.Medicines.Dimension.Score", "Care.Transition.Dimension.Score", "Responsiveness.of.Hospital.Staff.Dimension.Score", "Communication.with.Doctors.Dimension.Score", "Communication.with.Nurses.Dimension.Score", "H_STAR_RATING.x"))
+  dplyr::select(c("Total.Performance.Score", "Overall.Rating.of.Hospital.Dimension.Score", "Weighted.Efficiency.and.Cost.Reduction.Domain.Score",
+                  "Unweighted.Normalized.Efficiency.and.Cost.Reduction.Domain.Score", "Weighted.Person.and.Community.Engagement.Domain.Score",
+                  "Unweighted.Person.and.Community.Engagement.Domain.Score", "Weighted.Normalized.Clinical.Outcomes.Domain.Score", "HCAHPS.Consistency.Score",
+                  "HCAHPS.Base.Score", "Discharge.Information.Dimension.Score", "Cleanliness.and.Quietness.of.Hospital.Environment.Dimension.Score",
+                  "Communication.About.Medicines.Dimension.Score", "Care.Transition.Dimension.Score", "Responsiveness.of.Hospital.Staff.Dimension.Score",
+                  "Communication.with.Doctors.Dimension.Score", "Communication.with.Nurses.Dimension.Score", "H_STAR_RATING.x"))
 ```
 
+\
 
+### Calculating the Rand Index
 
-### Calculate the Rand Index for various values of 'k'
+To determine similarity between hospital clusters obtained from k means clustering and CMS star ratings (rated from 1 - 5), the Rand Index algorithm was used. RI is a similarity computation method which compares two different classifications of observations.  For the purpose of this analysis, one classification will be the results of the k-means clustering algorithm, and the other classification will be the overall star rating (1-5) determined by CMS.  The rand index algorithm outputs a value between 0 and 1, where 0 indicates no similarity between the two classifications and 1 indicates perfect similarity between them.  The output is adjusted (adjusted RI) to account for random chance groupings of observations.  
 
-To determine if the clustering captures hospital quality (as defined by CMS), the Rand Index (RI) algorithm can be used. RI is a similarity computation method which accepts two clusters.  For the purpose of this analysis, one cluster will be the results of the k-means clustering algorithm, and one cluster will be the overall star rating determined by CMS.  The rand index algorithm outputs a value between 0 and 1, where 0 indicates no similarity and 1 indicates perfect similarity between clusters.  The output is adjusted (adjusted RI) to account for random chance groupings of elements.  
+Because k means clustering can produce variable number of clusters, the adjusted RI was calculated for 2 - 8 clusters. The results of the adjusted RI algorithm for each cluster was visualized on a bar chart.  This analysis was then repeated for each iteration of the clustering analysis described above. 
 
-The adjusted RI was calculated for clusters (k) ranging from 2 - 8 and displayed on a bar graph.  
+*Results:* For all 3 clustering iterations, the adjusted RI indicates low similarity between the clustering results and CMS star rating.  These results were consistently low regardless of the number of clusters extracted. However, there is a significant increase in the adjusted RI when the number of clusters was > 6.  Interestingly, comparing star ratings to the iteration using only summary scores resulted in the lowest adjusted RI for all k clusters. 
 
-*Results:* For all 3 measure score datasets, the adjusted RI indicates low similarity for all k clusters.  Although there is a significant increase in the ARI when 'k' > 6, the value is < 0.5, indicating a low similarity between clusters.  Interestingly, comparing star ratings to the dataset containing only summary measure scores resulted in the lowest ARI for all k clusters.
+*Conclusion:* This is likely because the clustering algorithm is significantly different from the methodology CMS uses to determine overall star rating. Nevertheless, this clustering approach can help identify groups of hospitals that exhibit similar characteristics. 
 
-*Conclusion:* The computed clusters may be useful, but we can conclude they can not be used to indicate quality as defined by CMS's star ratings.  CMS likely uses different methodology go determine their overall star ratings.
-
-```{r RandIndex_function, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE}
-RI <- function(x, y, z) {
-  km4 <- kmeans(y, centers = x, nstart = 55)
-  fviz_cluster(km4, data = y, ellipse.type = c("norm"), geom = "point", palette = "Set1", ggtheme = theme_minimal())
+```{r RandIndex_Function, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+# Function to calculate the adjusted rand index given the calculated clusters and the actual star ratings
+# Given a number of clusters 'x' and a dataframe 'y'
+RI <- function(x, y) {
   
-  #Add cluster results to original data frame
+  # Create the clusters
+  km4 <- kmeans(y, centers = x, nstart = 55)
+  
+  # Add cluster results to original data frame
   cluster_results <- as.data.frame(km4$cluster)
   hosp_clusters <- bind_cols(cluster_norm, cluster_results)
   
-  #glimpse(cluster_results)
-  #glimpse(hosp_clusters)
-    
+  # Select only the 'Facility ID' and the cluster results (cluster each facility belongs to)
   hosp_clusters <- hosp_clusters %>%
     dplyr::select(c("Facility.ID", "km4$cluster")) %>%
     rename(cluster = `km4$cluster`) %>%
     transform(Facility.ID = as.character(Facility.ID))
-  #glimpse(hosp_clusters)
     
-  #compare clustering results of ground truth overall star ratings
+  # Read in the CMS dataset 'Hospital_General_Information.csv'
   star_ratings <- read_csv("data/Hospital_General_Information.csv")
   
+  # Select only the 'Facility ID' and the 'Hospital overall rating' (star rating)
   star_ratings <- star_ratings %>%
     filter(`Hospital Type` == "Acute Care Hospitals") %>%
     dplyr::select(c("Facility ID", "Hospital overall rating")) %>%
@@ -145,106 +200,113 @@ RI <- function(x, y, z) {
     
   star_ratings$Facility.ID <- star_ratings$Facility.ID %>%
     trimws("left", "0")
-  #glimpse(star_ratings)
     
+  # Join the clustering results and the actual star rating into a dataset
   hosp_cluster_comparison <- full_join(hosp_clusters, star_ratings)
-  #glimpse(hosp_cluster_comparison)
     
-  clust_analysis <- hosp_cluster_comparison %>%
-    group_by(cluster, Star.Rating) %>%
-    count()
-  #glimpse(clust_analysis)
+  # clust_analysis <- hosp_cluster_comparison %>%
+  #   group_by(cluster, Star.Rating) %>%
+  #   count()
+  #   
+  # clust_analysis %>%
+  #   ggplot() +
+  #   geom_bar(mapping = aes(x = Star.Rating, y = n, fill = cluster), stat = "identity") +
+  #   facet_wrap(~ cluster)
     
-  clust_analysis %>%
-    ggplot() +
-    geom_bar(mapping = aes(x = Star.Rating, y = n, fill = cluster), stat = "identity") +
-    facet_wrap(~ cluster)
-    
-  #Use rand index to comparison compare clustering accuracy
+  # Remove any hospitals with missing data
   hosp_clust_comp <- hosp_cluster_comparison %>%
     na.omit()
-  #glimpse(hosp_clust_comp)
     
+  # Use the adjusted rand index to compare the clustering results to the actual star rating
   adj.rand.index(hosp_clust_comp$Star.Rating,  hosp_clust_comp$cluster)
 }
 ```
 
 
-
-### Adjusted Rand Index for all quality measure scores in the data table
-
-```{r k-meansAll_RandIndex1, echo = TRUE, warning = FALSE, error = FALSE, message = FALSE}
+```{r k-means_Measures_RandIndex2, echo = TRUE, warning = FALSE, error = FALSE, message = FALSE}
+# For measure scores only, uses the function in code block 'RandIndex_Function' to plot the adjusted rand index for a various number of clusters
+# Create list to hold the number of clusters ('kVal') and the adjusted rand index
 kVal <- NULL
 randIndex <- NULL
 
-for(i in 2:8) {
-  kVal <- list.append(kVal, i)
-  randIndex <- list.append(randIndex, RI(i, cluster_norm_vars))
-}
-
-randIndexResults <- tibble(kVal = as.character(kVal), randIndex)
-
-randIndexResults %>%
-  ggplot() +
-  geom_bar(mapping = aes(x = kVal, y = randIndex, fill = kVal), 
-           stat = "identity", 
-           position = "dodge") +
-  scale_fill_brewer(palette = "RdPu", aesthetics = "fill")
-```
-
-### Adjusted Rand Index for all quality measure scores minus summary scores
-
-```{r k-meansAll_RandIndex2, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE}
-kVal <- NULL
-randIndex <- NULL
-
+# For 2 - 8 clusters, calculate the rand index and store the results to a dataframe
 for(i in 2:8) {
   kVal <- list.append(kVal, i)
   randIndex <- list.append(randIndex, RI(i, cluster_norm_vars_raw))
 }
 
+# Transform the dataframe into a tibble
 randIndexResults <- tibble(kVal = as.character(kVal), randIndex)
 
+# Plot the results on a bar chart
 randIndexResults %>%
   ggplot() +
   geom_bar(mapping = aes(x = kVal, y = randIndex, fill = kVal), stat = "identity", position = "dodge") +
-  scale_fill_brewer(palette = "RdPu", aesthetics = "fill")
-
-#Low randIndex, these clusters may be useful but not an indicator of quality as defined by CMS's star ratings
-#CMS uses different methodology go determine their final star ratings
+  scale_fill_brewer(palette = "RdPu", aesthetics = "fill") +
+  labs(title = "Adjusted RI for Quality Meausures Only")
 ```
 
-### Adjusted Rand Index for quality measure summary scores only
 
-```{r k-meansAll_RandIndex3, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+```{r k-means_Summary_RandIndex3, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+# For summary scores only, uses the function in code block 'RandIndex_Function' to plot the adjusted rand index for a various number of clusters
+# Create list to hold the number of clusters ('kVal') and the adjusted rand index
 kVal <- NULL
 randIndex <- NULL
 
+# For 2 - 8 clusters, calculate the rand index and store the results to a dataframe
 for(i in 2:8) {
   kVal <- list.append(kVal, i)
   randIndex <- list.append(randIndex, RI(i, cluster_norm_vars_summary))
 }
 
+# Transform the dataframe into a tibble
 randIndexResults <- tibble(kVal = as.character(kVal), randIndex)
 
+# Plot the results on a bar chart
 randIndexResults %>%
   ggplot() +
   geom_bar(mapping = aes(x = kVal, y = randIndex, fill = kVal), stat = "identity", position = "dodge") +
-  scale_fill_brewer(palette = "RdPu", aesthetics = "fill")
+  scale_fill_brewer(palette = "RdPu", aesthetics = "fill") +
+  labs(title = "Adjusted RI for Summary Scores Only")
 
-#Low randIndex, these clusters may be useful but not an indicator of quality as defined by CMS's star ratings
-#CMS uses different methodology go determine their final star ratings
 ```
 
 
+```{r k-means_All_RandIndex1, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+# For all measure and summary scores, uses the function in code block 'RandIndex_Function' to plot the adjusted rand index for a various number of clusters
+# Create list to hold the number of clusters ('kVal') and the adjusted rand index
+kVal <- NULL
+randIndex <- NULL
 
-### K-means Clustering visualizations
+# For 2 - 8 clusters, calculate the rand index and store the results to a dataframe
+for(i in 2:8) {
+  kVal <- list.append(kVal, i)
+  randIndex <- list.append(randIndex, RI(i, cluster_norm_vars))
+}
 
-The K-means clusters used in the adjusted RI index are visualized below on a scatterplot.  The values shown are 4 and 8, which showed fairly significant differences in similarity to the clusters implied by CMS's star ratings.  Notably, the dimensions shown on the x-axis and y-axis are dimensions generated through Principle Component Analysis (PCA) - a dimensionality reduction algorithm - that account for most of the variation in the original dataset.  Considering the original dataset has high dimensionality, there may be distinct clusters that are not visually distinct on this 2d projection.    
+# Transform the dataframe into a tibble
+randIndexResults <- tibble(kVal = as.character(kVal), randIndex)
 
-*Results:* For the clustering using all measures, there appears to be some significant clustering behavior, and the algorithm has done a fairly good job of capturing the clusters. However, a common issue with k-means clustering is apparent.  K-means assumes spherical clusters and therefore has difficulty capturing elongated clusters.  There appear to be multiple distinct, elongated clusters present that the algorithm has difficulty capturing for a low number of clusters k. /
+# Plot the results on a bar chart
+randIndexResults %>%
+  ggplot() +
+  geom_bar(mapping = aes(x = kVal, y = randIndex, fill = kVal), 
+           stat = "identity", 
+           position = "dodge") +
+  scale_fill_brewer(palette = "RdPu", aesthetics = "fill") +
+  labs(title = "Adjusted RI for All Variables")
+```
 
-```{r k-meansAll_Clusters, fig.show = "hold", out.width = "50%", echo = TRUE, message = FALSE, warning = FALSE}
+\
+
+### K-means Clustering Visualizations
+
+The K-means clusters used in the adjusted RI index are visualized below on a scatterplot.  The results shown are for 4 and 8 clusters within each iteration. This number of clusters was selected based on the adjusted RI results, which showed that similarity to overall star rating was consistently highest with 8 clusters and consistently low with 4 clusters.  Notably, the visualizations shown below are depicted on a two-dimensional plane where the x-axis and y-axis are dimensions generated through Principle Component Analysis (PCA) - a dimensionality reduction algorithm - that account for most of the variation in the original dataset.  Considering the original dataset has high dimensionality, there may be distinct clusters that are not visually distinct on this 2d projection.    
+
+*Results:* For the clustering using all measures, there appears to be some significant clustering behavior, and the algorithm has done a fairly good job of capturing the clusters. However, a common issue with k-means clustering is apparent.  K-means assumes even, spherical clusters and therefore has difficulty capturing elongated clusters.  There appear to be multiple distinct, elongated clusters present that the algorithm has difficulty capturing when a low number of clusters is specified. /
+
+```{r k-means_Plot_Clusters, fig.show = "hold", out.width = "50%", echo = TRUE, message = FALSE, warning = FALSE}
+# Function to plot the clusters for a given number of clusters 'x', a dataframe 'y', and a title 'z'
 clustering <- function(x, y, z) {
   km4 <- kmeans(y, centers = x, nstart = 55)
   fviz_cluster(km4, data = y, ellipse.type = c("norm"), 
@@ -254,31 +316,37 @@ clustering <- function(x, y, z) {
     labs(title = z)
 }
 
-#For all measures in data frame
-clustering(4, cluster_norm_vars, "4 Clusters - All Measures")
-clustering(8, cluster_norm_vars, "8 Clusters - All Measures")
+#For quality measure scores only
+clustering(4, cluster_norm_vars_raw, "4 Clusters - Quality Measure Scores")
+clustering(8, cluster_norm_vars_raw, "8 Clusters - Quality Measure Scores")
 
-#For quality measure scores minus summary scores
-clustering(4, cluster_norm_vars_raw, "4 Clusters - No Summary Scores")
-clustering(8, cluster_norm_vars_raw, "8 Clusters - No Summary Scores")
-
-#For summary quality measure scores only
+#For summary scores only
 clustering(4, cluster_norm_vars_summary, "4 Clusters - Summary Scores")
 clustering(8, cluster_norm_vars_summary, "4 Clusters - Summary Scores")
+
+#For all measure and summary scores in data frame
+clustering(4, cluster_norm_vars, "4 Clusters - All Scores")
+clustering(8, cluster_norm_vars, "8 Clusters - All Scores")
 ```
 
-
+\
 
 # Part 2 - Predicting Hospital Quality Using Hospital Characteristic Data
 
-The aim of this analysis is to determine if hospital star ratings can be predicted using several hospital characteristic-related variables.  To achieve this, ordinal logistic regression was used to model the relationship between star ratings (the ordinal response variable) and hospital characteristics (the explanatory variables).  The 80/20 split was used on a joined dataframe containing hospital general information and hospital characteristic variables.  All data was obtained from the Center for Medicare and Medicaid Services' (CMS) website.  
+The aim of this analysis is to determine if hospital star ratings can be predicted using several hospital characteristic-related variables.  Hospital characteristics data were also obtained from CMS, and include characteristics such as: availability of emergency services, hospital ownership type, and number of healthcare personnel employed at the hospital. 
+Because overall star rating is an ordinal variable from 1 - 5, ordinal logistic regression was used to model the relationship between star ratings (the ordinal response variable) and hospital characteristics (the explanatory variables).  Before building the prediction model, the hospital dataset was split into a training dataset and a testing dataset using an 80/20 split.
+
+The model was then developed using the training dataset and evaluated for accuracy using the test dataset.  The model was also tested for overfitting by evaluating accuracy using the training dataset itself.     
 
 ```{r readFiles, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+# Read in the CMS general hospital information file and provider of services files from CMS
+# IMPORTANT: The following code may require significant changes if using updated datasets downloaded from the CMS website
 star_ratings <- read_csv("data/Hospital_General_Information.csv")
-hospital_characteristics <- read_csv("data/Provider_of_Services_File_Hospital_Non_Hospital_Facilities_Dataset_2020_Q4.csv")
+hospital_characteristics <- read_csv("C:/Users/lkn56/Desktop/School Stuff/Fall 2021/CSCI 487/hospitals_current_data/CHARACTERISTICS/Provider_of_Services_File_Hospital_Non_Hospital_Facilities_Dataset_2020_Q4.csv")
 ```
 
 ```{r wrangleData, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+# Select 'Facility ID', 'Facility Name', and 'Emergency Services' and 'Hospital overall rating' (star rating) columns from the general hospital information dataset
 hospitals <- star_ratings %>%
   filter(`Hospital Type` == "Acute Care Hospitals") %>%
   dplyr::select(c("Facility ID", "Facility Name", 
@@ -289,6 +357,8 @@ hospitals <- star_ratings %>%
   mutate(star_rating = as.numeric(star_rating)) %>%
   na.omit()
 
+# Select the desired characteristics from the provider of services dataset
+# IMPORTANT: Variables causing multicollinearity and categorical data with a significantly uneven distribution have not been selected.  Selecting more variales may cause the ordinal regression model in code block 'regressionModel' to fail
 characteristics <- hospital_characteristics %>%
   dplyr::select(c("PRVDR_NUM", "CBSA_URBN_RRL_IND", "ACRDTN_TYPE_CD",
                   "CRTFD_BED_CNT", "MDCL_SCHL_AFLTN_CD", "OPRTG_ROOM_CNT", 
@@ -300,9 +370,10 @@ characteristics <- hospital_characteristics %>%
   mutate(ACRDTN_TYPE_CD = as.character(ACRDTN_TYPE_CD)) %>%
   mutate(MDCL_SCHL_AFLTN_CD = as.character(MDCL_SCHL_AFLTN_CD))
 
+# Join the dataframes containing hospital information and characteristics into one dataframe
 char_and_rate <- left_join(hospitals, characteristics, by = "Facility.ID")
 
-#recategorize ownership type variable with sparse data for some categories
+# Recategorize - Some categorical variables contain many categories which can be recategorized accordingly to have a more even distribution of data
 char_and_rate <- char_and_rate %>%
   mutate(star_rating = as.factor(star_rating)) %>%
   mutate(GNRL_CNTL_TYPE_CD = case_when(GNRL_CNTL_TYPE_CD == "01" ~ "Private_NFP", 
@@ -335,10 +406,12 @@ char_and_rate <- char_and_rate %>%
 ```
 
 ```{r setSeed, echo = FALSE, warning = FALSE, erorr = FALSE}
+# Set seed so the results are reproducible
 set.seed(123)
 ```
 
 ```{r regressionData, echo = TRUE, warning = FALSE, error = FALSE, message = FALSE}
+# Split the datafarme into a dataframe containing a random 80% of the data for training the model and a datarame containing the remaining 20% of data for testing the model
 training_data <- char_and_rate %>%
   dplyr::select(c(-"Facility.ID", -"Facility Name")) %>%
   sample_frac(.80)
@@ -356,34 +429,39 @@ testing_data <- testing_data %>%
   dplyr::select(c(-"Facility.ID", -"star_rating", -"Facility Name"))
 ```
 
+\
 
 ## Ordinal Regression Summary Table
 
-The following table is a summary of the ordinal logistic regression model results.  The p-value was calculated using the t-values determined by the model.  Based on a p value < 0.5, the significant variables are: Certified bed count, Medical school affiliation(y/n), LPN/LVN count, Nuclear medicine technician count, and Ownership type.  The following are interpretations of the coefficients of 'Certified bed count' and 'Ownership type':
+The following table is a summary of the ordinal logistic regression model results.  These results show a coefficient (slope) for each predictor variable, a standard error of the coefficient, and an odds ratio, calculated as the exponent of the coefficient.  A t-value is also provided by the model, which was used to determine the p-value presented below.  Based on a p value < 0.05, the significant variables are: Certified bed count, Medical school affiliation(y/n), LPN/LVN count, Nuclear medicine technician count, and Ownership type.  The following are example interpretations of the coefficients of 'Certified bed count' and 'Ownership type':
 
 * Certified bed count - For every unit increase in certified bed count, we expect the odds of a higher star rating to change by .999, given all other variables in the model are held constant. 
 * Ownership type - When ownership type changes from 'Government' to 'Other', we expect the odds of a higher star rating to change by 2.0, given all other variables in the model are held constant. Additionally, when ownership changes from 'Government' to 'Priviate Not-for-profit', we expect the odds of a higher star rating to change by 2.77 given all other variables in the model are held constant.
 
 ```{r regressionModel, echo = TRUE, warning = FALSE, error = FALSE}
-#run regression model on training data
+# Build the ordinal regression model using the training dataframe
 model_fit <- polr(star_rating~., data = training_data, Hess = TRUE)
 
+# Add some statistics to the ordinal regression model summary table to evaluate results and determine significant variables
 summary_table <- coef(summary(model_fit))
 pval <- pnorm(abs(summary_table[, "t value"]),lower.tail = FALSE)* 2
 summary_table <- cbind(summary_table, "p value" = round(pval, 3))
 summary_table <- as.data.frame(summary_table)
 
+# Prepare the summary table for display
 summary_table <- summary_table %>%
   mutate(Variables = rownames(summary_table)) %>%
   rename(Coefficients = Value) %>%
   mutate(Odds.ratio = exp(Coefficients)) %>%
   slice(1:20)
 
+# Remove row names
 rownames(summary_table) <- NULL
-glimpse(summary_table)
 
+# Reorder table for display
 summary_table <- subset(summary_table, select = c(5, 1, 6, 2, 3, 4)) 
 
+# Display a formatted table
 summary_table %>%
   kbl(digits = 3) %>%
   kable_styling(bootstrap_options = c("striped", "hover"), 
@@ -395,20 +473,24 @@ summary_table %>%
                                   "white"))
 ```
 
+\
 
 ## Confusion Matrix - Testing Accuracy of Prediction
 
-The random 20% testing data was used to predict star ratings from the ordinal regression model. A prediction matrix was calculated using the "predict" function, which generated a matrix of predictions for each value of the ordinal variable (star ratings).  To test the accuracy of prediction, a confusion matrix was generated using the actual star ratings for each hospital as the actual class and the max predicted star rating from the testing data as the predicted class. 
+The random 20% test dataset was used to evaluate the accuracy of the ordinal logistic regression model developed above. A prediction matrix was calculated using the "predict" function, which generated a matrix of predictions for each value of the ordinal variable (star ratings).  To test the accuracy of prediction, a confusion matrix was generated using the actual star ratings for each hospital as the actual class and the maximum predicted star rating from the prediction matrix as the predicted class. 
 
-Result: The confusion matrix suggested an overall accuracy of 32.2%, and a balanced accuracy was 51.6%.  To test for possible overfitting, a re-prediction was performed on the 80% data used to train the regression model.  The confusion matrix results suggested an accuracy of 34.7% and a balanced accuracy of 53.7%.  This result indicates underfitting.
+Result: The confusion matrix suggested an overall accuracy of 32.2%, and a balanced accuracy of 51.6%.  Accuracy of prediction was highest for 3 and 4 star hospitals.  
+To test for possible overfitting, a re-prediction was performed on the 80% data used to train the regression model.  The confusion matrix results suggested an accuracy of 34.7% and a balanced accuracy of 53.7%.  This result indicates that there are no concerns of overfitting.
 
 Conclusion: The overall and balanced prediction accuracy are low.  These variables are not sufficient to predict hospital quality with a high accuracy.  The model does show some ability to predict 3 & 4 star hospitals (as shown in the confusion matrix), and perhaps the model can be tuned further using variables from other sources.     
 
 ```{r testRegression, echo = FALSE, warning = FALSE, error = FALSE}
-#predict star ratings using the model and testing data
+# Predict star ratings using the model built in code block 'regressionModel' and testing data
+# Calculate a prediction matrix containing probabilities for each hospital for each star rating value
 prediction_testing <- round(predict(model_fit, testing_data, type = "p"), 3)
 prediction_testing <- as.data.frame(prediction_testing) 
   
+# Determine the star rating with the highest probability for each hospital and store value to a new column
 prediction_testing$prediction_testing_max <- pmax(prediction_testing$`1`, 
                                   prediction_testing$`2`, 
                                   prediction_testing$`3`, 
@@ -426,10 +508,12 @@ prediction_testing_class <- prediction_testing %>%
 prediction_testing_class$predicted_class <- factor(prediction_testing_class$predicted_class, 
                                            levels = c("1", "2", "3", "4", "5"))
 
-#predict star ratings using the model and training data
+# Predict star ratings using the model in code block 'regressionModel' and training data
+# Calculate a prediction matrix containing probabilities for each hospital for each star rating value
 prediction_training <- round(predict(model_fit, training_data, type = "p"), 3)
 prediction_training <- as.data.frame(prediction_training) 
   
+# Calculate the star rating with the highest probability for each hospital and store value to a new column
 prediction_training$prediction_training_max <- pmax(prediction_training$`1`, 
                                   prediction_training$`2`, 
                                   prediction_training$`3`, 
@@ -449,6 +533,8 @@ prediction_training_class$predicted_class <- factor(prediction_training_class$pr
 ```
 
 ```{r plotCM_Code, echo = TRUE, warning = FALSE, error = FALSE, fig.show = "hide"}
+# Create a confusion matrix using the maximum predicted star rating and the actual star rating for each hospital
+# IMPORTANT: This code block is just for showing the code in the HTML report
 cm_testing <-  confusion_matrix(as.factor(testing_data_actual$star_rating), 
                         as.factor(prediction_testing_class$predicted_class))
 
@@ -462,9 +548,11 @@ plot_confusion_matrix(cm_testing$`Confusion Matrix`[[1]],
 ```
 
 ```{r plotCM_testing, echo = FALSE, warning = FALSE, error = FALSE, fig.show = "hold", out.width="100%"}
+# For the predictions done on the testing data, create a confusion matrix using the maximum predicted star rating and the actual star rating for each hospital
 cm_testing <-  confusion_matrix(as.factor(testing_data_actual$star_rating), 
                         as.factor(prediction_testing_class$predicted_class))
 
+# Plot the confusion matrix results
 plot_confusion_matrix(cm_testing$`Confusion Matrix`[[1]], 
                       place_x_axis_above = FALSE, 
                       palette = "Greens",
@@ -476,9 +564,11 @@ plot_confusion_matrix(cm_testing$`Confusion Matrix`[[1]],
 
 
 ```{r plotCM_training, echo = FALSE, warning = FALSE, error = FALSE, fig.show = "hold", out.width="100%"}
+# For predictions done on the training data, create a confusion matrix using the maximum predicted star rating and the actual star rating for each hospital
 cm_training <- confusion_matrix(as.factor(training_data_actual$star_rating), 
                         as.factor(prediction_training_class$predicted_class))
 
+# Plot the confusion matrix results
 plot_confusion_matrix(cm_training$`Confusion Matrix`[[1]], 
                       place_x_axis_above = FALSE, 
                       palette = "Greens",
@@ -488,8 +578,14 @@ plot_confusion_matrix(cm_training$`Confusion Matrix`[[1]],
        subtitle = "Overall Accuracy: 34.7%, Balanced Accuracy: 53.3%")
 ```
 
-# Part 3 - Regional Variations in Hospital Quality
+\
+
+# Part 3 - Interactive Tool to Identify the Best Hospital
 
 Click the following link to use the Acute Care Hospital Finder app:
 
 [Acute Care Hospital Finder](https://444-information-visualization.shinyapps.io/Acute_Care_Hospital_Finder/)
+
+\
+
+This interactive tool allows an individual user to select their state and county of choice (where data is available), generating the location of the best hospital in the selected county.  Additionally, the average quality domain scores for all hospitals in that county are presented in a separate tab (where available). 
