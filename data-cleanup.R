@@ -331,7 +331,6 @@ for(i in 1:length(NT_Done)) {
 for(i in 1:length(Transposed_Cols)) {
   Transposed_Cols[[i]] <- Transposed_Cols[[i]] %>%
     dplyr::mutate(Facility.ID = as.character(Facility.ID))
-  glimpse(Transposed_Cols[[i]])
 }
 
 #Remove leading 0 from 'Facility ID' for some dataframes
@@ -355,7 +354,6 @@ NT_Done[[11]]$Facility.ID <- NT_Done[[11]]$Facility.ID %>%
 
 # Join dataframes - This is the initial join
 joined = full_join(x = NT_Done[[1]], y = NT_Done[[2]], by = c("Facility.ID" = "Facility.ID"))
-glimpse(joined)
 
 # Function to join the remaining dataframes consecutively
 join_tables <- function(t1, t2) {
@@ -401,4 +399,4 @@ joined_ACH_final <- joined_ACH %>%
 glimpse(joined_ACH_final)
 
 # Write the final dataframe to a file to be used in the clustering analysis
-write_csv(joined_ACH_final, "data/Measures_by_Hospital_Acute_Care_Final.csv")
+write_csv(joined_ACH_final, "data/Measures_by_Hospital_Acute_Care_120521.csv")

@@ -32,7 +32,7 @@ pacman::p_load(tidyverse, rlist, skimr, caret, MASS, cvms, kableExtra, VIM, sjPl
 ```{r readInitial, echo = FALSE, message = FALSE, warning = FALSE, error = FALSE}
 # Read in the dataframe created using the 'data-cleanup.R' source code
 # IMPORTANT: Uncomment and run if 'data-cleanup.R' was updated and run with new data
-# cluster <- read_csv("data/Measures_by_Hospital_Acute_Care_Final.csv")
+cluster <- read_csv("data/Measures_by_Hospital_Acute_Care_120521.csv")
 ```
 
 \
@@ -80,13 +80,13 @@ The normalization method being used is min-max normalization (or min-max scaling
 ```{r normalizeData, echo = TRUE, warning = FALSE, error = FALSE, message = FALSE}
 # Normalize the data stored in the 'cluster' data frame
 # IMPORTANT: uncomment and run if new data was read in from code block 'readInitial'
-# normalize <- function(x) {
-#   return ((x - min(x, na.rm = TRUE)) / (max(x, na.rm = TRUE) - min(x, na.rm = TRUE)))
-# }
-# 
-# for(i in 2:length(cluster)) {
-#   cluster[i] <- normalize(cluster[i])
-# }
+normalize <- function(x) {
+  return ((x - min(x, na.rm = TRUE)) / (max(x, na.rm = TRUE) - min(x, na.rm = TRUE)))
+}
+
+for(i in 2:length(cluster)) {
+  cluster[i] <- normalize(cluster[i])
+}
 ```
 
 
@@ -97,15 +97,15 @@ The aggregated dataset containing quality measures being used for this analysis 
 ```{r imputeMissing, echo = TRUE, warning = FALSE, error = FALSE, message = FALSE}
 # Impute missing values in the 'cluster' dataframe
 # IMPORTANT: uncomment and run if new data was read in from code block 'readInitial' and normalized in code block 'normalizeData'
-# kVal = floor(sqrt(nrow(cluster)))
-# cluster_NAR <- cluster %>%
-#   kNN(variable = 2:length(cluster), k = kVal, imp_var = FALSE)
+kVal = floor(sqrt(nrow(cluster)))
+cluster_NAR <- cluster %>%
+  kNN(variable = 2:length(cluster), k = kVal, imp_var = FALSE)
 ```
 
 ```{r write, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE}
 # Write the normalize and imputed dataframe to the 'data' folder so the 'readInitial', 'normalizeData', and 'imputeMissing' code blocks don't need to be run again for current data
 # IMPORTANT: uncomment and run if new data was read in, normalize, and imputed in the above code blocks
-# write_csv(cluster_NAR, "data/cluster_normalized_Final.csv")
+write_csv(cluster_NAR, "data/cluster_normalized_120521.csv")
 ```
 
 ```{r seed, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE}
@@ -126,7 +126,7 @@ Of the 64 variables being used for this analysis, 48 were individual quality mea
 
 ```{r readData_All, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE}
 # Read in the current dataframe containing normalized and imputed variables
-cluster_norm <- read_csv("data/cluster_normalized_Final.csv")
+cluster_norm <- read_csv("data/cluster_normalized_120521.csv")
 
 # Remove facility ID from the dataframe
 cluster_norm_vars <- cluster_norm %>%
