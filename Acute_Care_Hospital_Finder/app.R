@@ -8,8 +8,12 @@
 #
 
 # Uncomment and run to install the following packages if running this code for the first time
-# IMPORTANT: Comment out the install functions before publishing the Shiny app to shinyapp.io
-# install.packages("tidyverse", "shiny", "htmltools", "leaflet")
+# # IMPORTANT: Comment out the install functions before publishing the Shiny app to shinyapp.io
+# install.packages("tidyverse")
+# install.packages("shiny")
+# install.packages("htmltools") 
+# install.packages("leaflet")
+
 library(shiny)
 library(tidyverse)
 library(htmltools)

@@ -23,7 +23,20 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r importPackages, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE}
 # Uncomment and run to intall the following packages if running this code for the first time
-# install.packages("tidyverse", "rlist", "skimr", "caret", "MASS", "cvms", "kableExtra", "VIM", "sjPlot", "factoextra", "NbClust", "cluster", "rgl", "fossil")
+# install.packages("tidyverse")
+# install.packages("rlist")
+# install.packages("skimr")
+# install.packages("caret") 
+# install.packages("MASS")
+# install.packages("cvms")
+# install.packages("kableExtra")
+# install.packages("VIM")
+# install.packages("sjPlot") 
+# install.packages("factoextra")
+# install.packages("NbClust")
+# install.packages("cluster")
+# install.packages("rgl")
+# install.packages("fossil")
 
 # Load the necessary packages
 pacman::p_load(tidyverse, rlist, skimr, caret, MASS, cvms, kableExtra, VIM, sjPlot, factoextra, NbClust, cluster, rgl, fossil)

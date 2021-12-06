@@ -1,5 +1,8 @@
 # Uncomment and run to install the following packages if running this code for the first time
-# install.packages("tidyverse", "tinygeocoder", "usmap")
+# install.packages("tidyverse")
+# install.packages("tinygeocoder")
+# install.packages("usmap")
+
 pacman::p_load(tidyverse, tidygeocoder, usmap)
 
 # Read in hospital general information and get state data using the 'us_map' function
