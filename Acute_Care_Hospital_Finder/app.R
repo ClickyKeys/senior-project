@@ -1,11 +1,8 @@
 #
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
+# This is a Shiny web application which shows one of the best hospitals in the selected county and county-level hospital quality domain scores (where available).
+# You can run the application by clicking the 'Run App' button above.
 #
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
+
 
 # Uncomment and run to install the following packages if running this code for the first time
 # # IMPORTANT: Comment out the install functions before publishing the Shiny app to shinyapp.io
@@ -14,15 +11,18 @@
 # install.packages("htmltools") 
 # install.packages("leaflet")
 
+library(htmltools)
 library(shiny)
 library(tidyverse)
-library(htmltools)
 library(leaflet)
 
+# Read in the hospital locations data, general hospital information, and quality domain scores
+# WARNING: Using new data apart from what was downloaded from GitHub may require significant changes to the code
 locations <- read_csv("data/locations.csv")
 hospital_data <- read_csv("data/hospitals.csv") 
 measures <- read_csv("data/hvbp_tps.csv")
 
+# Select the quality measure domain scores to display in the app
 measures <- measures %>%
   select(c(2, 9, 11, 13, 15)) %>%
   rename(clinical_outcomes = `Unweighted Normalized Clinical Outcomes Domain Score`) %>%
@@ -30,14 +30,18 @@ measures <- measures %>%
   rename(person_and_community = `Unweighted Person and Community Engagement Domain Score`) %>%
   rename(efficiency_and_cost = `Unweighted Normalized Efficiency and Cost Reduction Domain Score`)
 
+# Join the hospital and quality measure data into a single dataframe
 hospital_data <- full_join(hospital_data, measures, by = "Facility ID")
 
-# Define UI for application that draws a histogram
+# Define UI for application that generates two tabs
+# First tab - Generates a leaflet map showing the location of a top rated hospital
+# Second tab - Generates a bar chart showing county-level performance in key quality domains
 ui <- fluidPage(
 
     # Application title
     titlePanel("Acute Care Hospital Finder"),
 
+    # Drop-downs for selecting options
     sidebarLayout(
         sidebarPanel(
             selectInput("state", label = "Select State:",
@@ -46,6 +50,7 @@ ui <- fluidPage(
                         choices = NULL)
         ),
   
+        # The main display area, tab panel containing two tabs
         mainPanel(
           tabsetPanel(
             tabPanel("Hospital Locations",
@@ -57,11 +62,11 @@ ui <- fluidPage(
         )
     )
 )
-?htmltools::HTML
 
 # Define server logic
 server <- function(input, output, session) {
 
+  # Depending on the state selected, generate a list of counties in that state with Hospital data
   observeEvent(input$state,{
     temp_df <- locations %>%
       filter(State == input$state) %>%
@@ -71,6 +76,7 @@ server <- function(input, output, session) {
                       choices = unique(temp_df$County))
   })
   
+  # Depending on the county selection made, generate a bar chart of average hospital quality domain performance scores
   output$statistics <- renderPlot({
     hospital_data %>%
       filter(State == input$state) %>%
@@ -89,13 +95,16 @@ server <- function(input, output, session) {
       coord_flip()
   })
     
+  # Create an object for storing reactive values
   MapPlot <- reactiveValues()
 
+  # Render a leaflet map
   output$MapPlot <- renderLeaflet({
     leaflet() %>%
       addTiles()
   })
   
+  # For the selected state and county, store reactive values for the hospital name, address, star rating, lat, and long
   observe({
     temp_df <- locations %>%
       filter(State == input$state) %>%
@@ -115,10 +124,13 @@ server <- function(input, output, session) {
     MapPlot$long <- temp_df %>%
       select(c("long"))
     
+    # Create a label for the hospital plotted on the map, which contains the reactive values stored above
     hosplabels <- sprintf("%s<br>%s, %s<br>Star Rating: %s",
                           MapPlot$name, MapPlot$address, MapPlot$city, MapPlot$rating) %>%
       lapply(htmltools::HTML)
     
+    # Set the markers on the generated leaflet map using the labels created above
+    # Set the view of the map to the lat & long of the hospital being plotted
     proxy <- leafletProxy("MapPlot") %>%
       clearMarkers()
     

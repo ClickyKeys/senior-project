@@ -1,3 +1,7 @@
+# The purpose of this program is used to clean the hospital quality measure data in preparation for clustering aaalysis
+# Current data can be downloaded from the following location: https://olemiss.app.box.com/s/ketgimkx4y26w2pusdy448l33dkl27cs
+# The data in the folder titled "MEASURES" should be used
+
 # Uncomment and run to install the following packages if running this code for the first time
 # install.packages("tidyverse")
 # install.packages("rlist")
@@ -5,8 +9,8 @@
 # Load the necessary packages
 pacman::p_load(tidyverse, rlist)
 
-# Import the datasets selected from CMS's hospital compare data
-# WARNING: Using updated, different, or additional dataframes may require significant changes to the code
+# Import the datasets selected from CMS's hospital compare data - Change the paths on lines 14 & 15 to the location of the 'MEASURES' folder on your machine
+# WARNING: Using updated, different, or additional dataframes apart from the data downloaded from GitHub may require significant changes to the code
 Hospital_Data <- list.files(path = "C:/Users/lkn56/Desktop/School Stuff/Fall 2021/CSCI 487/hospitals_current_data/MEASURES", pattern = "*.csv", full.names = TRUE)
 names(Hospital_Data) <- list.files(path = "C:/Users/lkn56/Desktop/School Stuff/Fall 2021/CSCI 487/hospitals_current_data/MEASURES", pattern = "*.csv", full.names = FALSE)
 
