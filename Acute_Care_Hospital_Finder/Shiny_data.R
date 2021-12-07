@@ -9,7 +9,13 @@
 # install.packages("tinygeocoder")
 # install.packages("usmap")
 
-pacman::p_load(tidyverse, tidygeocoder, usmap)
+# Uncomment and update the packages to avoid any loading issues
+# update.packages("tidyverse")
+# update.packages("tinygeocoder")
+# update.packages("usmap")
+library(tidyverse)
+library(tinygeocoder)
+library(usmap)
 
 # Read in hospital general information and get state data using the 'us_map' function
 # Data is located in the 'data' folder within 'Acute_Care_Hospital_Finder'

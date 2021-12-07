@@ -11,6 +11,12 @@
 # install.packages("htmltools") 
 # install.packages("leaflet")
 
+# Uncomment and update the following packages to avoid loading issues
+# update.packages("tidyverse")
+# update.packages("shiny")
+# update.packages("htmltools") 
+# update.packages("leaflet")
+
 library(htmltools)
 library(shiny)
 library(tidyverse)

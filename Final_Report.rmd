@@ -28,7 +28,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r importPackages, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE}
-# Uncomment and run to intall the following packages if running this code for the first time
+# Uncomment and run to intall the following packages (whichever haven't already been installed) if running this code for the first time
 
 # install.packages("tidyverse")
 # install.packages("rlist")
@@ -45,8 +45,37 @@ knitr::opts_chunk$set(echo = TRUE)
 # install.packages("rgl")
 # install.packages("fossil")
 
+# Uncomment and update the packages to avoid any loading issues
+# update.packages("tidyverse")
+# update.packages("rlist")
+# update.packages("skimr")
+# update.packages("caret") 
+# update.packages("MASS")
+# update.packages("cvms")
+# update.packages("kableExtra")
+# update.packages("VIM")
+# update.packages("sjPlot") 
+# update.packages("factoextra")
+# update.packages("NbClust")
+# update.packages("cluster")
+# update.packages("rgl")
+# update.packages("fossil")
+
 # Load the necessary packages
-pacman::p_load(tidyverse, rlist, skimr, caret, MASS, cvms, kableExtra, VIM, sjPlot, factoextra, NbClust, cluster, rgl, fossil)
+library(tidyverse)
+library(rlist)
+library(skimr)
+library(caret)
+library(MASS)
+library(cvms)
+library(kableExtra)
+library(VIM)
+library(sjPlot)
+library(factoextra)
+library(NbClust)
+library(cluster)
+library(rgl)
+library(fossil)
 ```
 
 ```{r readInitial, echo = FALSE, message = FALSE, warning = FALSE, error = FALSE}
