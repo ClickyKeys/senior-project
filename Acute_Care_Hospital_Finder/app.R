@@ -4,8 +4,8 @@
 #
 
 
-# Uncomment and run to install the following packages if running this code for the first time
-# # IMPORTANT: Comment out the install functions before publishing the Shiny app to shinyapp.io
+# Uncomment and select/run the 'install.packages' lines to install/update the following packages if running this code for the first time
+# # IMPORTANT: Comment out the install functions before running the app or publishing the Shiny app to shinyapp.io
 # install.packages("tidyverse")
 # install.packages("shiny")
 # install.packages("htmltools") 

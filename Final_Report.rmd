@@ -28,7 +28,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r importPackages, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE}
-# Uncomment and run to intall the following packages (whichever haven't already been installed) if running this code for the first time
+# Uncomment and select/run the 'install.packages' lines to install/update the following packages if running this code for the first time
+# IMPORTANT: Once finished installing, comment out the install functions (otherwise Knit will not work)
 
 # install.packages("tidyverse")
 # install.packages("rlist")
