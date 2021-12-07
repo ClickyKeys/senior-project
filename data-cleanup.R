@@ -6,10 +6,6 @@
 # install.packages("tidyverse")
 # install.packages("rlist")
 
-# Uncomment and update the packages to avoid any loading issues
-# update.packages("tidyverse")
-# update.packages("rlist")
-
 # Load the necessary packages
 library(tidyverse)
 library(rlist)

@@ -45,22 +45,6 @@ knitr::opts_chunk$set(echo = TRUE)
 # install.packages("rgl")
 # install.packages("fossil")
 
-# Uncomment and update the packages to avoid any loading issues
-# update.packages("tidyverse")
-# update.packages("rlist")
-# update.packages("skimr")
-# update.packages("caret") 
-# update.packages("MASS")
-# update.packages("cvms")
-# update.packages("kableExtra")
-# update.packages("VIM")
-# update.packages("sjPlot") 
-# update.packages("factoextra")
-# update.packages("NbClust")
-# update.packages("cluster")
-# update.packages("rgl")
-# update.packages("fossil")
-
 # Load the necessary packages
 library(tidyverse)
 library(rlist)

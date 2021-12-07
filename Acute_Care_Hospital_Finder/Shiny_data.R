@@ -9,11 +9,6 @@
 # install.packages("tinygeocoder")
 # install.packages("usmap")
 
-# Uncomment and update the packages to avoid any loading issues
-# update.packages("tidyverse")
-# update.packages("tinygeocoder")
-# update.packages("usmap")
-library(tidyverse)
 library(tinygeocoder)
 library(usmap)
 
